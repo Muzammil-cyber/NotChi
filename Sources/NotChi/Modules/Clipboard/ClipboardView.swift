@@ -9,14 +9,14 @@ struct ClipboardView: View {
         case all = "All", text = "Text", code = "Code", links = "Links", images = "Images", files = "Files"
         var id: String { rawValue }
 
-        func matches(_ item: ClipItem) -> Bool {
+        var storeFilter: ClipboardStore.KindFilter {
             switch self {
-            case .all: true
-            case .text: item.kind == .text || item.kind == .richText
-            case .code: item.kind == .code
-            case .links: item.kind == .link
-            case .images: item.kind == .image
-            case .files: item.kind == .file
+            case .all: .all
+            case .text: .kinds([.text, .richText])
+            case .code: .kinds([.code])
+            case .links: .kinds([.link])
+            case .images: .kinds([.image])
+            case .files: .kinds([.file])
             }
         }
     }
@@ -28,15 +28,8 @@ struct ClipboardView: View {
     @State private var needsAccessibilityHint = false
     @FocusState private var searchFocused: Bool
 
-    private var visible: [ClipItem] {
-        let q = query.trimmingCharacters(in: .whitespaces)
-        let matched = store.items.filter { item in
-            filter.matches(item)
-                && (q.isEmpty || item.preview.localizedCaseInsensitiveContains(q)
-                    || (item.sourceName ?? "").localizedCaseInsensitiveContains(q))
-        }
-        return matched.filter(\.pinned) + matched.filter { !$0.pinned }
-    }
+    /// Filtering, search and ordering (pinned first) happen in the store's SQL query.
+    private var visible: [ClipItem] { store.results }
 
     var body: some View {
         VStack(spacing: 6) {
@@ -58,8 +51,9 @@ struct ClipboardView: View {
             NotchState.shared.holdOpen("clipboard-search", focused)
             if focused { NotchController.shared.focusPanel() }
         }
-        .onChange(of: query) { _, _ in selection = visible.first?.id }
-        .onChange(of: filter) { _, _ in selection = visible.first?.id }
+        .onChange(of: query) { _, _ in runSearch() }
+        .onChange(of: filter) { _, _ in runSearch() }
+        .onAppear { store.search(query, filter: filter.storeFilter) }
         .onDisappear { NotchState.shared.holdOpen("clipboard-search", false) }
     }
 
@@ -96,7 +90,7 @@ struct ClipboardView: View {
                 .buttonStyle(.plain)
             }
             Spacer(minLength: 0)
-            if store.items.contains(where: { !$0.pinned }) {
+            if store.hasUnpinned {
                 Button("Clear") { store.clear() }
                     .buttonStyle(.plain)
                     .font(.system(size: 11))
@@ -133,20 +127,23 @@ struct ClipboardView: View {
         if items.isEmpty {
             VStack(spacing: 6) {
                 Image(systemName: "doc.on.clipboard").font(.system(size: 22))
-                Text(store.items.isEmpty ? "Nothing copied yet" : "No matches").font(.system(size: 12))
+                Text(store.isEmpty ? "Nothing copied yet" : "No matches").font(.system(size: 12))
             }
             .foregroundStyle(.white.opacity(0.35))
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else {
+            TimelineView(.everyMinute) { timeline in
+            let now = timeline.date
             ScrollViewReader { proxy in
                 ScrollView {
                     LazyVStack(spacing: 2) {
                         ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
-                            ClipRow(item: item, selected: selection == item.id, shortcut: index < 9 ? index + 1 : nil,
+                            ClipRow(item: item, selected: selection == item.id, shortcut: index < 9 ? index + 1 : nil, now: now,
                                     onPaste: { paste(item) },
                                     onPin: { store.togglePin(item) },
                                     onDelete: { store.delete(item) })
                                 .id(item.id)
+                                .onAppear { if index == items.count - 1 { store.loadMore() } }
                         }
                     }
                 }
@@ -154,6 +151,7 @@ struct ClipboardView: View {
                 .onChange(of: selection) { _, id in
                     if let id { withAnimation(.easeOut(duration: 0.1)) { proxy.scrollTo(id) } }
                 }
+            }
             }
         }
     }
@@ -188,16 +186,36 @@ struct ClipboardView: View {
         if let item = items.first(where: { $0.id == selection }) ?? items.first { paste(item) }
     }
 
+    private func runSearch() {
+        store.search(query, filter: filter.storeFilter)
+        selection = visible.first?.id
+    }
+
     private func paste(_ item: ClipItem) {
-        needsAccessibilityHint = !Paster.paste(item)
+        // List rows are trimmed (no RTF, capped text); paste the complete item.
+        needsAccessibilityHint = !Paster.paste(store.fullItem(item))
         searchFocused = false
     }
 }
 
 private struct ClipRow: View {
+    /// Coarse age label: "now", "5m", "3h", "2d", then a date.
+    static func age(of date: Date, now: Date) -> String {
+        let seconds = max(0, now.timeIntervalSince(date))
+        switch seconds {
+        case ..<60: return "now"
+        case ..<3600: return "\(Int(seconds / 60))m"
+        case ..<86400: return "\(Int(seconds / 3600))h"
+        case ..<(7 * 86400): return "\(Int(seconds / 86400))d"
+        default: return date.formatted(.dateTime.month(.abbreviated).day())
+        }
+    }
+
     let item: ClipItem
     let selected: Bool
     let shortcut: Int?
+    /// Supplied by a once-a-minute timeline; a self-updating relative `Text` would redraw every second.
+    let now: Date
     let onPaste: () -> Void
     let onPin: () -> Void
     let onDelete: () -> Void
@@ -214,7 +232,7 @@ private struct ClipRow: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                 HStack(spacing: 4) {
                     if let name = item.sourceName { Text(name) }
-                    Text(item.date, format: .relative(presentation: .numeric, unitsStyle: .abbreviated))
+                    Text(Self.age(of: item.date, now: now))
                 }
                 .font(.system(size: 10))
                 .foregroundStyle(.white.opacity(0.4))

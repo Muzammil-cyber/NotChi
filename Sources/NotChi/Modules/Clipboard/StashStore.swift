@@ -120,6 +120,18 @@ final class StashStore {
         save()
     }
 
+    /// Called after the item was dropped into another app. The stored file (if any) is kept
+    /// for a minute because the receiving app may still be copying it.
+    func removeAfterDragOut(_ item: StashItem) {
+        guard let index = items.firstIndex(where: { $0.id == item.id }) else { return }
+        let removed = items.remove(at: index)
+        save()
+        guard removed.storedFile != nil else { return }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 60) { [weak self] in
+            MainActor.assumeIsolated { self?.deleteStoredFile(removed) }
+        }
+    }
+
     /// Removes every unpinned item; pinned ones stay.
     func clearUnpinned() {
         items.filter { !$0.pinned }.forEach(deleteStoredFile)
@@ -159,20 +171,16 @@ final class StashStore {
         Paster.ignoredChangeCount = pb.changeCount
     }
 
-    func itemProvider(for item: StashItem) -> NSItemProvider {
+    /// What gets placed on the drag pasteboard: file URLs for files and images, URLs for links.
+    func pasteboardWriter(for item: StashItem) -> NSPasteboardWriting? {
         switch item.kind {
         case .file, .image:
-            if let url = item.fileURL {
-                return NSItemProvider(contentsOf: url) ?? NSItemProvider(object: url as NSURL)
-            }
-            return NSItemProvider()
+            return item.fileURL as NSURL?
         case .link:
-            if let url = URL(string: (item.text ?? "").trimmingCharacters(in: .whitespacesAndNewlines)) {
-                return NSItemProvider(object: url as NSURL)
-            }
-            return NSItemProvider(object: (item.text ?? "") as NSString)
+            let trimmed = (item.text ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+            return (URL(string: trimmed) as NSURL?) ?? (trimmed as NSString)
         case .text:
-            return NSItemProvider(object: (item.text ?? "") as NSString)
+            return (item.text ?? "") as NSString
         }
     }
 

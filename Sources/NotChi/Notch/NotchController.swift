@@ -20,6 +20,9 @@ final class NotchController {
     private var exitStart: Date?
     /// Opened by the hotkey: stay open until the pointer visits and leaves, Escape, or an outside click.
     private var stickyOpen = false
+    /// Drag pasteboard change count when the button went down; a change during the press means a drop is in progress.
+    private var pressDragPasteboardCount = 0
+    private var wasButtonDown = false
     private var pointerVisitedSinceSticky = false
     private var outsideClickMonitor: Any?
     private var hotKey: HotKey?
@@ -52,11 +55,7 @@ final class NotchController {
             MainActor.assumeIsolated { self?.handleOutsideClick() }
         }
 
-        let timer = Timer(timeInterval: 1.0 / 30.0, repeats: true) { [weak self] _ in
-            MainActor.assumeIsolated { self?.poll() }
-        }
-        RunLoop.main.add(timer, forMode: .common)
-        pollTimer = timer
+        schedulePoll(interval: Self.fastPoll)
 
         registerHotKey()
         observeHotKeySetting()
@@ -114,6 +113,21 @@ final class NotchController {
 
     // MARK: - Internals
 
+    /// Hover polling runs fast only near the notch (or while open / dragging) and idles slowly elsewhere.
+    private static let fastPoll: TimeInterval = 1.0 / 30.0
+    private static let slowPoll: TimeInterval = 0.2
+
+    private func schedulePoll(interval: TimeInterval) {
+        guard pollTimer?.timeInterval != interval else { return }
+        pollTimer?.invalidate()
+        let timer = Timer(timeInterval: interval, repeats: true) { [weak self] _ in
+            MainActor.assumeIsolated { self?.poll() }
+        }
+        timer.tolerance = interval * 0.2
+        RunLoop.main.add(timer, forMode: .common)
+        pollTimer = timer
+    }
+
     private func layout() {
         guard let screen = NotchGeometry.preferredScreen() else { return }
         let geometry = NotchGeometry(screen: screen)
@@ -124,20 +138,36 @@ final class NotchController {
     private func poll() {
         let mouse = NSEvent.mouseLocation
         let geometry = state.geometry
-        let dragging = NSEvent.pressedMouseButtons & 1 != 0
+        let buttonDown = NSEvent.pressedMouseButtons & 1 != 0
+        let dragging = buttonDown
+        // A real drag-and-drop (file, image, text) writes to the drag pasteboard; a plain
+        // mouse drag such as moving a window by its title bar does not. Reading the change
+        // count is a cross-process call, so only do it around presses.
+        if buttonDown != wasButtonDown {
+            if buttonDown { pressDragPasteboardCount = NSPasteboard(name: .drag).changeCount }
+            wasButtonDown = buttonDown
+        }
+        let dropInProgress = buttonDown && NSPasteboard(name: .drag).changeCount != pressDragPasteboardCount
+
+        let nearNotch = geometry.expandedRect.insetBy(dx: -120, dy: -120).contains(mouse)
+        schedulePoll(interval: state.isExpanded || nearNotch || buttonDown || hoverStart != nil
+                     ? Self.fastPoll : Self.slowPoll)
 
         if !state.isExpanded {
-            let trigger = geometry.collapsedRect(leftWing: state.leftWingWidth, rightWing: state.rightWingWidth)
-                .insetBy(dx: -6, dy: -2)
-            // Extend the trigger zone upward so slamming the cursor into the top edge counts.
-            let zone = trigger.union(CGRect(x: trigger.minX, y: trigger.maxY, width: trigger.width, height: 4))
-            guard zone.contains(mouse), settings.hoverToExpand || dragging else {
-                hoverStart = nil
+            let collapsed = geometry.collapsedRect(leftWing: state.leftWingWidth, rightWing: state.rightWingWidth)
+            // Dragged items get a generous zone reaching well below the notch, so the panel
+            // opens before the pointer hits the top edge (where macOS would open Mission Control).
+            if dropInProgress {
+                let dropZone = CGRect(x: collapsed.minX - 60, y: collapsed.minY - 80,
+                                      width: collapsed.width + 120, height: collapsed.height + 84)
+                if dropZone.contains(mouse) { expand() }
                 return
             }
-            // A drag (e.g. a file from Finder) expands immediately so the stash can receive it.
-            if dragging {
-                expand()
+            let trigger = collapsed.insetBy(dx: -6, dy: -2)
+            // Extend the trigger zone upward so slamming the cursor into the top edge counts.
+            let zone = trigger.union(CGRect(x: trigger.minX, y: trigger.maxY, width: trigger.width, height: 4))
+            guard zone.contains(mouse), settings.hoverToExpand, !buttonDown else {
+                hoverStart = nil
                 return
             }
             if let start = hoverStart {
@@ -173,7 +203,7 @@ final class NotchController {
 
     // MARK: - Wings vs. menu bar
 
-    /// Re-measures the menu bar every couple of seconds while collapsed, and right away
+    /// Re-measures the menu bar every few seconds while collapsed, and right away
     /// when the frontmost app (and so its menus) changes.
     private func startMenuBarProbe() {
         let workspace = NSWorkspace.shared.notificationCenter
@@ -188,7 +218,7 @@ final class NotchController {
                 }
             }
         }
-        let timer = Timer(timeInterval: 2.5, repeats: true) { [weak self] _ in
+        let timer = Timer(timeInterval: 5, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated { self?.updateWings() }
         }
         RunLoop.main.add(timer, forMode: .common)

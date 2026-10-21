@@ -20,9 +20,12 @@ final class MenuBarProbe: @unchecked Sendable {
     private var pidsWithExtras: Set<pid_t> = []
     private var lastFullSweep = Date.distantPast
     private let fullSweepInterval: TimeInterval = 20
+    /// Main-actor only.
+    private var cachedPIDs: [pid_t]?
 
     /// Measures in the background and calls back on the main actor.
     /// `notchRect` is in AppKit global coordinates; `primaryMaxY` converts AX (top-left) y.
+    @MainActor
     func measure(notchRect: CGRect, primaryMaxY: CGFloat, completion: @escaping @MainActor (Extents) -> Void) {
         guard AXIsProcessTrusted() else {
             Task { @MainActor in completion(Extents()) }
@@ -30,7 +33,9 @@ final class MenuBarProbe: @unchecked Sendable {
         }
         let frontPID = NSWorkspace.shared.frontmostApplication?.processIdentifier
         // Background agents (MenuBarAgent, VPN helpers…) own status items too, so include every app.
-        let apps = NSWorkspace.shared.runningApplications.map(\.processIdentifier)
+        // Listing apps is surprisingly costly, so the list is cached until an app launches or quits.
+        if cachedPIDs == nil { cachedPIDs = NSWorkspace.shared.runningApplications.map(\.processIdentifier) }
+        let apps = cachedPIDs ?? []
         queue.async { [self] in
             let extents = sweep(notchRect: notchRect, primaryMaxY: primaryMaxY, frontPID: frontPID, allPIDs: apps)
             Task { @MainActor in completion(extents) }
@@ -38,7 +43,9 @@ final class MenuBarProbe: @unchecked Sendable {
     }
 
     /// Forces the next measurement to re-query every app (e.g. after an app launches).
+    @MainActor
     func invalidate() {
+        cachedPIDs = nil
         queue.async { [self] in lastFullSweep = .distantPast }
     }
 

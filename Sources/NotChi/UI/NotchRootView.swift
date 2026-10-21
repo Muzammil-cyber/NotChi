@@ -25,7 +25,8 @@ struct NotchRootView: View {
             NotchShape(topRadius: expanded ? 12 : 6, bottomRadius: expanded ? 24 : 9)
                 .fill(Color.black)
                 .frame(width: size.width, height: size.height)
-                .shadow(color: .black.opacity(expanded ? 0.5 : 0), radius: 16, y: 10)
+                // A shadow is an extra offscreen pass; skip it entirely while collapsed.
+                .shadow(color: expanded ? .black.opacity(0.5) : .clear, radius: expanded ? 16 : 0, y: expanded ? 10 : 0)
 
             if expanded {
                 ExpandedContent(state: state, host: host)
@@ -72,11 +73,15 @@ private struct ExpandedContent: View {
     var body: some View {
         VStack(spacing: 8) {
             // Header row shares the strip beside the hardware notch.
-            HStack {
-                ModuleTabBar(modules: host.modules, selectedID: state.selectedModuleID) { id in
-                    NotchController.shared.select(moduleID: id)
+            HStack(spacing: 0) {
+                // The header shares the strip beside the hardware notch, so the tabs must fit
+                // in the space left of it; fall back to icons-only tabs when they don't.
+                ViewThatFits(in: .horizontal) {
+                    tabBar(compact: false)
+                    tabBar(compact: true)
                 }
-                Spacer(minLength: state.geometry.notchSize.width + 16)
+                .frame(width: sideWidth, alignment: .leading)
+                Spacer(minLength: state.geometry.notchSize.width)
                 HStack(spacing: 10) {
                     Button { AppDelegate.shared?.showSettings() } label: {
                         Image(systemName: "gearshape")
@@ -102,6 +107,20 @@ private struct ExpandedContent: View {
         .padding(.horizontal, 8)
         .padding(.bottom, 16)
         .foregroundStyle(.white)
+    }
+
+    /// Width available on each side of the notch inside the header row.
+    private var sideWidth: CGFloat {
+        // Panel width minus the content inset (12 per side) and this view's padding (8 per side).
+        let usable = NotchGeometry.expandedSize.width - 24 - 16
+        return max(0, (usable - state.geometry.notchSize.width) / 2 - 8)
+    }
+
+    private func tabBar(compact: Bool) -> some View {
+        ModuleTabBar(modules: host.modules, selectedID: state.selectedModuleID, compact: compact) { id in
+            NotchController.shared.select(moduleID: id)
+        }
+        .fixedSize()
     }
 }
 

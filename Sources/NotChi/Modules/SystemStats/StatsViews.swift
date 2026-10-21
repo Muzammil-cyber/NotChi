@@ -217,6 +217,7 @@ private struct StatCard<Header: View>: View {
             Spacer(minLength: 0)
             Sparkline(series: series, fixedMax: fixedMax)
                 .frame(height: 48)
+                .drawingGroup() // rasterize the gradient paths on the GPU each tick
         }
         .padding(12)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)

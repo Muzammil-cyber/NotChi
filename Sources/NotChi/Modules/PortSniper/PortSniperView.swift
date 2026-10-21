@@ -55,7 +55,7 @@ struct PortSniperView: View {
                 .controlSize(.mini)
                 .font(.system(size: 11))
                 .foregroundStyle(.white.opacity(0.6))
-            Button { Task { await model.refresh() } } label: {
+            Button { Task { await model.refreshNow() } } label: {
                 Image(systemName: "arrow.clockwise")
                     .rotationEffect(.degrees(model.isRefreshing ? 180 : 0))
                     .animation(.easeInOut(duration: 0.3), value: model.isRefreshing)

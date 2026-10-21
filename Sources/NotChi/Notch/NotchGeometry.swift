@@ -12,7 +12,7 @@ struct NotchGeometry: Equatable {
     static let wingWidth: CGFloat = 78
     /// Below this a wing is hidden rather than squeezed.
     static let minWingWidth: CGFloat = 54
-    static let expandedSize = CGSize(width: 680, height: 330)
+    static let expandedSize = CGSize(width: 720, height: 330)
 
     init(screen: NSScreen) {
         screenFrame = screen.frame

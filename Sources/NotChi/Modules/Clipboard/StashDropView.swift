@@ -117,6 +117,17 @@ private struct StashChip: View {
         .padding(.horizontal, 6)
         .frame(height: 42)
         .background(.white.opacity(hovering ? 0.16 : 0.08), in: RoundedRectangle(cornerRadius: 8))
+        // Drag, click and right-click are handled in AppKit so we learn whether a drop landed.
+        .overlay {
+            StashDragSource(
+                writer: { store.pasteboardWriter(for: item) },
+                preview: { dragPreview },
+                onClick: { store.copy(item) },
+                menu: { contextMenu },
+                onDragEnd: { droppedElsewhere in
+                    if droppedElsewhere && !item.pinned { store.removeAfterDragOut(item) }
+                })
+        }
         .overlay(alignment: .topTrailing) {
             if hovering {
                 Button { store.remove(item) } label: {
@@ -133,29 +144,29 @@ private struct StashChip: View {
             }
         }
         .padding(.top, 5)
-        .contentShape(RoundedRectangle(cornerRadius: 8))
         .onHover { hovering = $0 }
-        .onTapGesture { store.copy(item) }
-        .onDrag {
-            NotchState.shared.holdOpen("stash-drag", true)
-            Task { @MainActor in
-                try? await Task.sleep(for: .milliseconds(300))
-                while NSEvent.pressedMouseButtons != 0 { try? await Task.sleep(for: .milliseconds(150)) }
-                NotchState.shared.holdOpen("stash-drag", false)
+        .help(item.pinned ? item.title : item.title + "\nDrag it out to use it; it leaves the stash unless pinned.")
+    }
+
+    private var dragPreview: NSImage? {
+        guard let url = item.fileURL else { return nil }
+        if item.kind == .image, let image = Thumbnails.image(at: url) { return image }
+        return NSWorkspace.shared.icon(forFile: url.path)
+    }
+
+    private var contextMenu: NSMenu {
+        let menu = NSMenu()
+        menu.addItem(ClosureMenuItem(item.pinned ? "Unpin" : "Pin (keep after dragging out)") { store.togglePin(item) })
+        menu.addItem(ClosureMenuItem("Copy") { store.copy(item) })
+        if item.kind == .file {
+            if item.storedFile == nil {
+                menu.addItem(ClosureMenuItem("Copy into Stash") { store.copyIntoStash(item) })
             }
-            return store.itemProvider(for: item)
+            menu.addItem(ClosureMenuItem("Reveal in Finder") { store.revealInFinder(item) })
         }
-        .help(item.title)
-        .contextMenu {
-            Button(item.pinned ? "Unpin" : "Pin") { store.togglePin(item) }
-            Button("Copy") { store.copy(item) }
-            if item.kind == .file {
-                if item.storedFile == nil { Button("Copy into Stash") { store.copyIntoStash(item) } }
-                Button("Reveal in Finder") { store.revealInFinder(item) }
-            }
-            Divider()
-            Button("Remove", role: .destructive) { store.remove(item) }
-        }
+        menu.addItem(.separator())
+        menu.addItem(ClosureMenuItem("Remove") { store.remove(item) })
+        return menu
     }
 
     @ViewBuilder private var icon: some View {

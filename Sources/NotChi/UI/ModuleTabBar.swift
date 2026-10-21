@@ -3,6 +3,8 @@ import SwiftUI
 struct ModuleTabBar: View {
     let modules: [NotchModule]
     let selectedID: String
+    /// Icons only, with the title shown just for the selected tab.
+    var compact = false
     let onSelect: (String) -> Void
 
     var body: some View {
@@ -12,10 +14,16 @@ struct ModuleTabBar: View {
                 Button {
                     onSelect(module.id)
                 } label: {
-                    Label(module.title, systemImage: module.systemImage)
-                        .labelStyle(.titleAndIcon)
+                    Group {
+                        if compact && !selected {
+                            Image(systemName: module.systemImage)
+                        } else {
+                            Label(module.title, systemImage: module.systemImage).labelStyle(.titleAndIcon)
+                        }
+                    }
                         .font(.system(size: 11, weight: .medium))
-                        .padding(.horizontal, 9)
+                        .help(module.title)
+                        .padding(.horizontal, compact ? 7 : 9)
                         .padding(.vertical, 4)
                         .background(Capsule().fill(selected ? Color.white.opacity(0.16) : .clear))
                         .foregroundStyle(selected ? Color.white : Color.white.opacity(0.55))

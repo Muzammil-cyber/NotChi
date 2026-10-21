@@ -15,12 +15,28 @@ final class ClipboardModule: NotchModule {
         monitor.onItem = { [store] item in store.add(item) }
     }
 
-    func start() { monitor.start() }
+    func start() {
+        monitor.start()
+        observeLimit()
+    }
 
     func stop() {
         monitor.stop()
-        store.saveNow()
         stash.shutdown()
+    }
+
+    func setVisible(_ visible: Bool) { store.setVisible(visible) }
+
+    /// Trims the history right away when the limit is lowered in Settings.
+    private func observeLimit() {
+        withObservationTracking {
+            _ = Settings.shared.clipboardLimit
+        } onChange: { [weak self] in
+            Task { @MainActor in
+                self?.store.applyLimit()
+                self?.observeLimit()
+            }
+        }
     }
 
     func makeExpandedView() -> AnyView { AnyView(ClipboardView(store: store)) }

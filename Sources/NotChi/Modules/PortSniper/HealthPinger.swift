@@ -35,10 +35,12 @@ enum HealthPinger {
         return URLSession(configuration: config)
     }()
 
-    static func ping(port: UInt16, ipv6Only: Bool) async -> PortHealth {
+    /// TCP connect latency, plus an HTTP HEAD status when `checkHTTP` (that request is the
+    /// costly part, so callers reuse the previous status most of the time).
+    static func ping(port: UInt16, ipv6Only: Bool, checkHTTP: Bool = true, knownStatus: Int? = nil) async -> PortHealth {
         let host = ipv6Only ? "::1" : "127.0.0.1"
         guard let latency = await connect(host: host, port: port) else { return .unresponsive }
-        let code = await headStatus(host: ipv6Only ? "[::1]" : "127.0.0.1", port: port)
+        let code = checkHTTP ? await headStatus(host: ipv6Only ? "[::1]" : "127.0.0.1", port: port) : knownStatus
         return PortHealth(status: latency < healthyThresholdMs ? .healthy : .slow, latencyMs: latency, httpStatus: code)
     }
 

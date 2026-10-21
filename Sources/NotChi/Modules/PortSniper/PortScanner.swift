@@ -105,14 +105,33 @@ enum PortScanner {
                         hasIPv4: old.hasIPv4 || l.v4, hasIPv6: old.hasIPv6 || l.v6,
                         binding: old.binding == .loopback ? l.binding : old.binding)
                 } else {
-                    let info = ProcessInfoLookup(pid: pid)
+                    let info = cachedInfo(for: pid)
                     merged[key] = PortEntry(
                         port: l.port, pid: pid, uid: info.uid, name: info.name, path: info.path,
                         cwd: info.cwd, command: info.command, hasIPv4: l.v4, hasIPv6: l.v6, binding: l.binding)
                 }
             }
         }
+        pruneInfoCache(keeping: Set(merged.values.map(\.pid)))
         return merged.values.sorted { ($0.port, $0.pid) < ($1.port, $1.pid) }
+    }
+
+    // Process name/path/cwd/argv need several syscalls each; they don't change for a running
+    // pid, so look them up once per listening process instead of on every 3 s rescan.
+    private static let infoLock = NSLock()
+    nonisolated(unsafe) private static var infoCache: [pid_t: ProcessInfoLookup] = [:]
+
+    private static func cachedInfo(for pid: pid_t) -> ProcessInfoLookup {
+        infoLock.lock(); defer { infoLock.unlock() }
+        if let info = infoCache[pid] { return info }
+        let info = ProcessInfoLookup(pid: pid)
+        infoCache[pid] = info
+        return info
+    }
+
+    private static func pruneInfoCache(keeping pids: Set<pid_t>) {
+        infoLock.lock(); defer { infoLock.unlock() }
+        infoCache = infoCache.filter { pids.contains($0.key) }
     }
 
     // MARK: - libproc
