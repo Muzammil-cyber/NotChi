@@ -45,6 +45,7 @@ if [[ -z "${SKIP_DMG:-}" ]]; then
   STAGE="$(mktemp -d)"
   cp -R "$APP" "$STAGE/"
   ln -s /Applications "$STAGE/Applications"
+  cp Resources/DMG/*.txt "$STAGE/" 2>/dev/null || true
   rm -f "$OUT/NotChi.dmg"
   hdiutil create -volname "NotChi" -srcfolder "$STAGE" -ov -format UDZO "$OUT/NotChi.dmg" >/dev/null
   rm -rf "$STAGE"

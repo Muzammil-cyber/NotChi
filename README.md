@@ -13,17 +13,74 @@ Hover over the notch, or press **⌥⌘N**, to open it.
 
 On the roadmap: Wi-Fi file transfer to and from your phone (QR code plus browser, no app needed), a Now Playing controller, and a calendar agenda with one-click meeting joins.
 
-## Install
+## Installation
 
-1. Download `NotChi.dmg` from [Releases](../../releases) and drag **NotChi** into Applications.
-2. NotChi isn't notarized, because the project has no paid Apple developer account. Open it once like this:
-   - In Finder, right-click NotChi and choose **Open**, then **Open**. Or run:
-     ```sh
-     xattr -dr com.apple.quarantine /Applications/NotChi.app
-     ```
-3. **Optional:** to turn on auto-paste, grant Accessibility access in **System Settings → Privacy & Security → Accessibility**. Without it, choosing an item copies it and you press ⌘V yourself.
+1. Download `NotChi.dmg` from the [latest release](../../releases/latest).
+2. Open the DMG and drag **NotChi** into **Applications**.
+3. Launch NotChi from Applications. The first time, follow the steps below.
 
-> **Note:** Release builds are ad-hoc signed, so macOS treats each new version as a new app. After an update you may need to remove NotChi from the Accessibility list and add it again.
+### 🚀 macOS Gatekeeper notice
+
+Because this is a free, open-source project, the `.dmg` isn't signed with a paid Apple Developer ID. When you first open the app, macOS blocks it by default.
+
+To open the app safely, without any terminal commands:
+
+1. Double-click NotChi. When the security warning pops up, click **Done** (or **OK**/**Cancel**, depending on your macOS version).
+2. Open **System Settings** and go to **Privacy & Security**.
+3. Scroll down to the **Security** section.
+4. You'll see a note saying NotChi was blocked. Click **Open Anyway** and enter your Mac password, or use Touch ID.
+5. Click **Open** in the confirmation that follows.
+
+You only need to do this once. After approving it, NotChi launches normally.
+
+> **Tip:** the **Open Anyway** button only shows for about an hour after the blocked launch. If you don't see it, double-click NotChi again and go back to Privacy & Security.
+>
+> On macOS 15 (Sequoia) and later, right-clicking the app and choosing **Open** no longer skips this check, so use the steps above.
+
+<details>
+<summary>Prefer the terminal?</summary>
+
+This removes the quarantine flag macOS adds to downloaded files:
+
+```sh
+xattr -dr com.apple.quarantine /Applications/NotChi.app
+```
+
+</details>
+
+### First-run setup
+
+- **Find it:** NotChi has no Dock icon. Move your pointer onto the notch, or press **⌥⌘N**, to open it. On Macs without a notch it's a small pill at the top center of the screen.
+- **Turn on auto-paste (recommended):** go to **System Settings → Privacy & Security → Accessibility** and switch **NotChi** on. You can also click **Open System Settings** in NotChi → Settings → Permissions.
+  - **What it does:** lets NotChi paste a clipboard item straight into the app you're using. It also keeps the stats beside the notch from covering your menus and menu bar icons.
+  - **Without it:** picking an item only copies it, and you press ⌘V yourself.
+- **Launch at login:** turn it on in **Settings → General**.
+
+### Updating
+
+Download the new DMG and replace the app in Applications. You may need to repeat the Gatekeeper steps once for the new version.
+
+If auto-paste stops working after an update, the Accessibility switch may be on for the *old* copy. Go to **Privacy & Security → Accessibility**, select NotChi, remove it with **−**, then add it again with **+**. NotChi's Settings → Permissions shows whether access is currently granted.
+
+### Troubleshooting
+
+| Problem | Fix |
+| --- | --- |
+| "NotChi is damaged and can't be opened" | The download was quarantined. Use the terminal command above, or download again. |
+| Nothing appears at the notch | Check that NotChi is running in Activity Monitor. Then try **⌥⌘N**, and check **Settings → General → Expand on hover**. |
+| ⌥⌘N does nothing | Another app may use that shortcut. Pick a different one in **Settings → General**. |
+| Clicking an item copies but doesn't paste | Grant Accessibility (see above). If it already looks granted, remove NotChi from the list and add it again. |
+| Stats next to the notch disappeared | That's intentional: a side hides when your app's menus or menu bar icons need the space. You can turn the stats off in **Settings → General**. |
+| A Docker/OrbStack container is missing from Ports | Make sure Docker/OrbStack is running and the container publishes a port (`-p 8080:80`). |
+
+### Uninstall
+
+Quit NotChi from **Settings → General → Quit NotChi**. Then delete it from Applications and remove its data:
+
+```sh
+rm -rf ~/Library/Application\ Support/NotChi
+defaults delete com.notchi.app
+```
 
 ## Permissions
 

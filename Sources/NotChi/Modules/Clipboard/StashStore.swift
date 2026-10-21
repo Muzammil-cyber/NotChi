@@ -1,4 +1,5 @@
 import AppKit
+import CryptoKit
 import Observation
 import UniformTypeIdentifiers
 
@@ -16,6 +17,8 @@ struct StashItem: Codable, Identifiable, Equatable {
     var bookmark: Data?
     /// File inside `AppPaths.directory("stash")` (dropped images and copied-in files).
     var storedFile: String?
+    /// Identity used to avoid stashing the same thing twice: file path, image hash or text.
+    var contentKey: String?
 
     static var directory: URL { AppPaths.directory("stash") }
 
@@ -65,24 +68,42 @@ final class StashStore {
     // MARK: Adding
 
     func addFile(_ url: URL) {
-        items.insert(StashItem(kind: .file, path: url.path, bookmark: try? url.bookmarkData()), at: 0)
-        save()
+        let key = "file:" + url.standardizedFileURL.resolvingSymlinksInPath().path
+        guard !bringToFront(key: key) else { return }
+        insert(StashItem(kind: .file, path: url.path, bookmark: try? url.bookmarkData(), contentKey: key))
     }
 
     func addImage(_ image: NSImage) {
         guard let png = image.pngData else { return }
+        let key = "image:" + SHA256.hash(data: png).map { String(format: "%02x", $0) }.joined()
+        guard !bringToFront(key: key) else { return }
         let name = UUID().uuidString + ".png"
         guard (try? png.write(to: StashItem.directory.appendingPathComponent(name))) != nil else { return }
-        items.insert(StashItem(kind: .image, storedFile: name), at: 0)
-        save()
+        insert(StashItem(kind: .image, storedFile: name, contentKey: key))
     }
 
     func addText(_ string: String) {
         let trimmed = string.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
+        let key = "text:" + trimmed
+        guard !bringToFront(key: key) else { return }
         let isLink = !trimmed.contains(where: \.isWhitespace) && ["http", "https"].contains(URL(string: trimmed)?.scheme?.lowercased() ?? "")
-        items.insert(StashItem(kind: isLink ? .link : .text, text: string), at: 0)
+        insert(StashItem(kind: isLink ? .link : .text, text: string, contentKey: key))
+    }
+
+    private func insert(_ item: StashItem) {
+        items.insert(item, at: 0)
         save()
+    }
+
+    /// If an item with this identity is already stashed, moves it to the front and returns true.
+    private func bringToFront(key: String) -> Bool {
+        guard let index = items.firstIndex(where: { $0.contentKey == key }) else { return false }
+        var existing = items.remove(at: index)
+        existing.date = Date()
+        items.insert(existing, at: 0)
+        save()
+        return true
     }
 
     // MARK: Actions
@@ -96,6 +117,13 @@ final class StashStore {
     func remove(_ item: StashItem) {
         guard let index = items.firstIndex(where: { $0.id == item.id }) else { return }
         deleteStoredFile(items.remove(at: index))
+        save()
+    }
+
+    /// Removes every unpinned item; pinned ones stay.
+    func clearUnpinned() {
+        items.filter { !$0.pinned }.forEach(deleteStoredFile)
+        items.removeAll { !$0.pinned }
         save()
     }
 

@@ -21,11 +21,21 @@ struct StashDropView: View {
                 .font(.system(size: 11))
                 .foregroundStyle(.white.opacity(targeted ? 0.9 : 0.45))
             } else {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 6) {
-                        ForEach(store.items) { StashChip(item: $0, store: store) }
+                HStack(spacing: 0) {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 6) {
+                            ForEach(store.items) { StashChip(item: $0, store: store) }
+                        }
+                        .padding(.horizontal, 6)
                     }
-                    .padding(.horizontal, 6)
+                    if store.items.contains(where: { !$0.pinned }) {
+                        Button("Clear") { store.clearUnpinned() }
+                            .buttonStyle(.plain)
+                            .font(.system(size: 11))
+                            .foregroundStyle(.white.opacity(0.5))
+                            .padding(.horizontal, 10)
+                            .help("Remove all unpinned items")
+                    }
                 }
             }
         }
@@ -38,30 +48,53 @@ struct StashDropView: View {
         .onChange(of: targeted) { _, value in NotchState.shared.holdOpen("stash-drop", value) }
     }
 
+    /// A single drag usually carries several representations of the same thing (a file URL
+    /// plus an image or text, sometimes repeated), so each drop is resolved to one kind:
+    /// files win, then images, then text/links.
     private func handle(_ providers: [NSItemProvider]) {
-        for provider in providers {
-            if provider.canLoadObject(ofClass: URL.self) {
-                _ = provider.loadObject(ofClass: URL.self) { url, _ in
-                    Task { @MainActor in
-                        if let url, url.isFileURL { store.addFile(url) }
-                        else if provider.canLoadObject(ofClass: NSImage.self) { loadImage(provider) }
-                        else if let url { store.addText(url.absoluteString) }
-                    }
-                }
-            } else if provider.canLoadObject(ofClass: NSImage.self) {
-                loadImage(provider)
-            } else if provider.canLoadObject(ofClass: String.self) {
-                _ = provider.loadObject(ofClass: String.self) { string, _ in
-                    Task { @MainActor in if let string { store.addText(string) } }
-                }
+        Task { @MainActor in
+            let urls = await load(URL.self, from: providers)
+            let files = urls.filter(\.isFileURL)
+            if !files.isEmpty {
+                files.forEach(store.addFile)
+                return
             }
+            let images = await load(NSImage.self, from: providers)
+            if !images.isEmpty {
+                images.forEach(store.addImage)
+                return
+            }
+            if let link = urls.first {
+                store.addText(link.absoluteString)
+                return
+            }
+            for string in await load(String.self, from: providers) { store.addText(string) }
         }
     }
 
-    private func loadImage(_ provider: NSItemProvider) {
-        _ = provider.loadObject(ofClass: NSImage.self) { image, _ in
-            Task { @MainActor in if let image = image as? NSImage { store.addImage(image) } }
+    private func load<T: _ObjectiveCBridgeable>(_ type: T.Type, from providers: [NSItemProvider]) async -> [T]
+    where T._ObjectiveCType: NSItemProviderReading {
+        var results: [T] = []
+        for provider in providers where provider.canLoadObject(ofClass: T.self) {
+            let value: T? = await withCheckedContinuation { continuation in
+                _ = provider.loadObject(ofClass: T.self) { value, _ in continuation.resume(returning: value) }
+            }
+            if let value { results.append(value) }
         }
+        return results
+    }
+
+    private func load(_ type: NSImage.Type, from providers: [NSItemProvider]) async -> [NSImage] {
+        var results: [NSImage] = []
+        for provider in providers where provider.canLoadObject(ofClass: NSImage.self) {
+            let image: NSImage? = await withCheckedContinuation { continuation in
+                _ = provider.loadObject(ofClass: NSImage.self) { value, _ in
+                    continuation.resume(returning: value as? NSImage)
+                }
+            }
+            if let image { results.append(image) }
+        }
+        return results
     }
 }
 
@@ -85,10 +118,21 @@ private struct StashChip: View {
         .frame(height: 42)
         .background(.white.opacity(hovering ? 0.16 : 0.08), in: RoundedRectangle(cornerRadius: 8))
         .overlay(alignment: .topTrailing) {
-            if item.pinned {
+            if hovering {
+                Button { store.remove(item) } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 13))
+                        .symbolRenderingMode(.palette)
+                        .foregroundStyle(.white, .black.opacity(0.75))
+                }
+                .buttonStyle(.plain)
+                .help("Remove from stash")
+                .offset(x: 5, y: -5)
+            } else if item.pinned {
                 Image(systemName: "pin.fill").font(.system(size: 8)).foregroundStyle(.white.opacity(0.7)).padding(3)
             }
         }
+        .padding(.top, 5)
         .contentShape(RoundedRectangle(cornerRadius: 8))
         .onHover { hovering = $0 }
         .onTapGesture { store.copy(item) }
