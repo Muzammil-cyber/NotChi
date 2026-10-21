@@ -1,0 +1,59 @@
+# Build output
+.build/
+build/
+*.dmg
+DerivedData/
+
+# Xcode / SwiftPM
+.swiftpm/
+*.xcodeproj/
+*.xcworkspace/
+xcuserdata/
+*.xcuserstate
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Editors
+.vscode/
+.idea/
+*.swp
+*~
+
+# AI assistants & agent tooling
+.agents/
+.agent/
+.claude/
+CLAUDE.md
+CLAUDE.local.md
+claude.md
+AGENTS.md
+agents.md
+.cursor/
+.cursorrules
+.cursorignore
+.windsurf/
+.windsurfrules
+.codeium/
+.github/copilot-instructions.md
+.copilot/
+.aider*
+.continue/
+.cline/
+.clinerules
+.roo/
+.roomodes
+.gemini/
+GEMINI.md
+.codex/
+.junie/
+.kiro/
+.zed/
+.ai/
+.mcp.json
+mcp.json
+.specstory/
+memory-bank/
