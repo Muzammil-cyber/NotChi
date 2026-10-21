@@ -24,7 +24,7 @@ struct ClipboardView: View {
     @State private var query = ""
     @State private var filter: Filter = .all
     @State private var selection: UUID?
-    @State private var trusted = Permissions.isAccessibilityTrusted
+    private var accessibility = AccessibilityStatus.shared
     @State private var needsAccessibilityHint = false
     @FocusState private var searchFocused: Bool
 
@@ -41,7 +41,7 @@ struct ClipboardView: View {
     var body: some View {
         VStack(spacing: 6) {
             header
-            if needsAccessibilityHint && !trusted { accessibilityBanner }
+            if needsAccessibilityHint && !accessibility.isTrusted { accessibilityBanner }
             content
         }
         .focusable()
@@ -60,7 +60,6 @@ struct ClipboardView: View {
         }
         .onChange(of: query) { _, _ in selection = visible.first?.id }
         .onChange(of: filter) { _, _ in selection = visible.first?.id }
-        .onAppear { trusted = Permissions.isAccessibilityTrusted }
         .onDisappear { NotchState.shared.holdOpen("clipboard-search", false) }
     }
 
@@ -113,7 +112,7 @@ struct ClipboardView: View {
             Spacer()
             Button("Enable") {
                 Permissions.requestAccessibility()
-                trusted = Permissions.isAccessibilityTrusted
+                AppDelegate.shared?.showSettings(tab: .permissions)
             }
             .buttonStyle(.plain)
             .font(.system(size: 11, weight: .semibold))
@@ -190,9 +189,7 @@ struct ClipboardView: View {
     }
 
     private func paste(_ item: ClipItem) {
-        let didPaste = Paster.paste(item)
-        trusted = didPaste
-        needsAccessibilityHint = !didPaste
+        needsAccessibilityHint = !Paster.paste(item)
         searchFocused = false
     }
 }

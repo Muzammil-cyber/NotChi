@@ -12,6 +12,11 @@ final class NotchState {
     var geometry: NotchGeometry
     var selectedModuleID: String = ""
 
+    /// Current collapsed wing widths (0 = hidden). Set by the controller from the
+    /// menu bar layout so the wings never cover menus or status icons.
+    var leftWingWidth: CGFloat = 0
+    var rightWingWidth: CGFloat = 0
+
     /// Reasons the panel must not auto-collapse (e.g. a drag in progress, a text field
     /// being edited, a confirmation dialog). Modules insert and remove their own keys.
     var holdOpenReasons: Set<String> = []

@@ -17,6 +17,8 @@ final class Settings {
     /// Bundle identifiers whose copies are never recorded.
     var clipboardExcludedApps: [String] { didSet { defaults.set(clipboardExcludedApps, forKey: "clipboardExcludedApps") } }
     var portsShowAll: Bool { didSet { defaults.set(portsShowAll, forKey: "portsShowAll") } }
+    /// Off by default: the icon would sit right beside the notch, under the stats wing.
+    var showMenuBarIcon: Bool { didSet { defaults.set(showMenuBarIcon, forKey: "showMenuBarIcon") } }
 
     private init() {
         defaults.register(defaults: [
@@ -26,6 +28,7 @@ final class Settings {
             "clipboardLimit": 300,
             "clipboardExcludedApps": ["com.apple.keychainaccess", "com.1password.1password", "com.bitwarden.desktop"],
             "portsShowAll": false,
+            "showMenuBarIcon": false,
         ])
         showWings = defaults.bool(forKey: "showWings")
         hoverToExpand = defaults.bool(forKey: "hoverToExpand")
@@ -33,6 +36,7 @@ final class Settings {
         clipboardLimit = defaults.integer(forKey: "clipboardLimit")
         clipboardExcludedApps = defaults.stringArray(forKey: "clipboardExcludedApps") ?? []
         portsShowAll = defaults.bool(forKey: "portsShowAll")
+        showMenuBarIcon = defaults.bool(forKey: "showMenuBarIcon")
     }
 }
 

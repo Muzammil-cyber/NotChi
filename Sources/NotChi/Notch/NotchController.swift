@@ -23,7 +23,8 @@ final class NotchController {
     private var pointerVisitedSinceSticky = false
     private var outsideClickMonitor: Any?
     private var hotKey: HotKey?
-    private var settingsObservation: Any?
+    private let menuBarProbe = MenuBarProbe()
+    private var probeTimer: Timer?
 
     private let expandDelay: TimeInterval = 0.12
     private let collapseDelay: TimeInterval = 0.35
@@ -59,6 +60,7 @@ final class NotchController {
 
         registerHotKey()
         observeHotKeySetting()
+        startMenuBarProbe()
     }
 
     // MARK: - Public API
@@ -119,15 +121,14 @@ final class NotchController {
         panel.setFrame(geometry.panelFrame, display: true)
     }
 
-    private var wingsVisible: Bool { settings.showWings && host.hasWings }
-
     private func poll() {
         let mouse = NSEvent.mouseLocation
         let geometry = state.geometry
         let dragging = NSEvent.pressedMouseButtons & 1 != 0
 
         if !state.isExpanded {
-            let trigger = geometry.collapsedRect(withWings: wingsVisible).insetBy(dx: -6, dy: -2)
+            let trigger = geometry.collapsedRect(leftWing: state.leftWingWidth, rightWing: state.rightWingWidth)
+                .insetBy(dx: -6, dy: -2)
             // Extend the trigger zone upward so slamming the cursor into the top edge counts.
             let zone = trigger.union(CGRect(x: trigger.minX, y: trigger.maxY, width: trigger.width, height: 4))
             guard zone.contains(mouse), settings.hoverToExpand || dragging else {
@@ -162,17 +163,75 @@ final class NotchController {
         }
     }
 
-    private func visibleExpandedRect() -> CGRect {
-        let frame = state.geometry.panelFrame
-        let size = NotchGeometry.expandedSize
-        return CGRect(x: frame.midX - size.width / 2, y: frame.maxY - size.height, width: size.width, height: size.height)
-    }
+    private func visibleExpandedRect() -> CGRect { state.geometry.expandedRect }
 
     private func handleOutsideClick() {
         guard state.isExpanded else { return }
         // Global monitors only fire for clicks outside our own windows.
         if !visibleExpandedRect().contains(NSEvent.mouseLocation) { collapse() }
     }
+
+    // MARK: - Wings vs. menu bar
+
+    /// Re-measures the menu bar every couple of seconds while collapsed, and right away
+    /// when the frontmost app (and so its menus) changes.
+    private func startMenuBarProbe() {
+        let workspace = NSWorkspace.shared.notificationCenter
+        workspace.addObserver(forName: NSWorkspace.didActivateApplicationNotification, object: nil, queue: .main) { [weak self] _ in
+            MainActor.assumeIsolated { self?.updateWings() }
+        }
+        for name in [NSWorkspace.didLaunchApplicationNotification, NSWorkspace.didTerminateApplicationNotification] {
+            workspace.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in
+                MainActor.assumeIsolated {
+                    self?.menuBarProbe.invalidate()
+                    self?.updateWings()
+                }
+            }
+        }
+        let timer = Timer(timeInterval: 2.5, repeats: true) { [weak self] _ in
+            MainActor.assumeIsolated { self?.updateWings() }
+        }
+        RunLoop.main.add(timer, forMode: .common)
+        probeTimer = timer
+        observeWingSetting()
+        updateWings()
+    }
+
+    private func updateWings() {
+        guard settings.showWings, host.hasWings else {
+            setWings(left: 0, right: 0)
+            return
+        }
+        guard !state.isExpanded else { return }
+        let notch = state.geometry.notchRect
+        let primaryMaxY = NSScreen.screens.first?.frame.maxY ?? state.geometry.screenFrame.maxY
+        menuBarProbe.measure(notchRect: notch, primaryMaxY: primaryMaxY) { [weak self] extents in
+            guard let self, settings.showWings else { return }
+            let left = host.leftWing == nil ? 0
+                : NotchGeometry.wingWidth(available: extents.menusMaxX.map { notch.minX - $0 })
+            let right = host.rightWing == nil ? 0
+                : NotchGeometry.wingWidth(available: extents.statusItemsMinX.map { $0 - notch.maxX })
+            setWings(left: left, right: right)
+        }
+    }
+
+    private func setWings(left: CGFloat, right: CGFloat) {
+        if state.leftWingWidth != left { state.leftWingWidth = left }
+        if state.rightWingWidth != right { state.rightWingWidth = right }
+    }
+
+    private func observeWingSetting() {
+        withObservationTracking {
+            _ = settings.showWings
+        } onChange: { [weak self] in
+            Task { @MainActor in
+                self?.updateWings()
+                self?.observeWingSetting()
+            }
+        }
+    }
+
+    // MARK: - Hotkey
 
     private func registerHotKey() {
         hotKey?.unregister()

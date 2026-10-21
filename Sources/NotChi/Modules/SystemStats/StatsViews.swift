@@ -267,8 +267,9 @@ private struct SparkShape: Shape {
     func path(in rect: CGRect) -> Path {
         var path = Path()
         guard values.count > 1, maxValue > 0 else { return path }
-        let step = rect.width / CGFloat(StatsModel.historyLength - 1)
-        let startX = rect.width - step * CGFloat(values.count - 1) // newest sample pinned to the right edge
+        // Spread the samples across the full width until the history fills up, then scroll.
+        let step = rect.width / CGFloat(values.count - 1)
+        let startX: CGFloat = 0
         let points = values.enumerated().map { i, v in
             CGPoint(x: startX + step * CGFloat(i),
                     y: rect.height - rect.height * CGFloat(min(1, max(0, v / maxValue))))

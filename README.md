@@ -29,7 +29,7 @@ On the roadmap: Wi-Fi file transfer to and from your phone (QR code plus browser
 
 | Permission | Used for |
 | --- | --- |
-| Accessibility | Posting ⌘V into the frontmost app (auto-paste). |
+| Accessibility | Posting ⌘V into the frontmost app (auto-paste), and reading where menus and menu bar icons are so the stats wings never cover them. |
 | None | Hover detection, the global shortcut (a Carbon hotkey), clipboard polling, system stats, port scanning (libproc, current user's processes). |
 
 NotChi skips clipboard items that password managers mark as concealed or transient. You can also exclude apps by bundle ID in Settings. All data stays local in `~/Library/Application Support/NotChi`.
@@ -46,14 +46,21 @@ scripts/build-app.sh         # universal build/NotChi.app + build/NotChi.dmg
 
 Open `Package.swift` in Xcode to develop with the full IDE.
 
-**Stable signing for development:** ad-hoc signatures change on every build, which resets the Accessibility grant. To avoid that, create a self-signed code-signing certificate in Keychain Access:
+**Signing and Accessibility:** macOS ties the Accessibility grant to the app's signing identity.
 
-1. Go to **Certificate Assistant → Create a Certificate…**, name it `NotChi Dev`, and set the type to *Code Signing*.
-2. Build with:
+- `build-app.sh` signs with your **Apple Development** certificate when you have one. A free Apple ID added in Xcode → Settings → Accounts is enough. That identity stays the same across builds, so you grant Accessibility once.
+- Without that certificate, the build is ad-hoc signed and each build looks like a new app. You'd have to remove NotChi from the Accessibility list and add it again after every build.
+- `SIGN_ID="<identity>"` picks a specific certificate, and `SIGN_ID=-` forces ad-hoc signing.
 
-```sh
-SIGN_ID="NotChi Dev" scripts/build-app.sh
-```
+## Automation
+
+Scripts, Raycast, or Shortcuts can drive NotChi with distributed notifications:
+
+| Notification | Object |
+| --- | --- |
+| `com.notchi.app.open` | optional tab: `clipboard`, `ports`, `stats` |
+| `com.notchi.app.close` | — |
+| `com.notchi.app.settings` | optional pane: `general`, `clipboard`, `ports`, `permissions`, `about` |
 
 ## Architecture
 

@@ -1,9 +1,13 @@
 #!/usr/bin/env bash
 # Builds NotChi.app (universal) and NotChi.dmg into ./build.
 #
-#   scripts/build-app.sh             # ad-hoc signed (no Apple developer account needed)
-#   SIGN_ID="NotChi Dev" scripts/build-app.sh   # sign with a local self-signed cert so the
-#                                               # Accessibility grant survives rebuilds
+#   scripts/build-app.sh             # signs with your "Apple Development" identity if present
+#                                    # (free Apple ID works), otherwise ad-hoc
+#   SIGN_ID="NotChi Dev" scripts/build-app.sh   # sign with a specific identity
+#   SIGN_ID=- scripts/build-app.sh   # force ad-hoc (what CI does)
+#
+# A stable identity matters: with ad-hoc signing every build is a "new app" to macOS
+# and the Accessibility grant stops applying after each rebuild.
 #   SKIP_DMG=1 scripts/build-app.sh  # app bundle only
 set -euo pipefail
 
@@ -11,7 +15,10 @@ cd "$(dirname "$0")/.."
 ROOT="$PWD"
 OUT="$ROOT/build"
 APP="$OUT/NotChi.app"
-SIGN_ID="${SIGN_ID:--}"
+if [[ -z "${SIGN_ID:-}" ]]; then
+  SIGN_ID="$(security find-identity -v -p codesigning 2>/dev/null | awk -F'"' '/Apple Development/ {print $2; exit}')"
+  SIGN_ID="${SIGN_ID:--}"
+fi
 VERSION="${VERSION:-$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' Resources/Info.plist)}"
 
 echo "==> Building release binary"

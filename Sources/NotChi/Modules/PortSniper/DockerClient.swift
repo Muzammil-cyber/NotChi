@@ -108,7 +108,9 @@ enum DockerClient {
 
         var response = Data()
         var chunk = [UInt8](repeating: 0, count: 16 * 1024)
-        while true {
+        // Engines may keep the connection open, so stop as soon as the response is complete
+        // instead of waiting for EOF (which would cost the full read timeout).
+        while !isComplete(response) {
             let n = recv(fd, &chunk, chunk.count, 0)
             if n <= 0 { break }
             response.append(chunk, count: n)
@@ -122,6 +124,22 @@ enum DockerClient {
         let body = Data(response[split.upperBound...])
         let chunked = head.lowercased().contains("transfer-encoding: chunked")
         return (status, chunked ? dechunk(body) : body)
+    }
+
+    /// True once the headers plus a full chunked or Content-Length body have arrived.
+    private static func isComplete(_ response: Data) -> Bool {
+        guard let split = response.range(of: Data("\r\n\r\n".utf8)) else { return false }
+        let head = String(decoding: response[..<split.lowerBound], as: UTF8.self).lowercased()
+        let bodyCount = response.distance(from: split.upperBound, to: response.endIndex)
+        if head.contains("transfer-encoding: chunked") {
+            return response.suffix(5).elementsEqual("0\r\n\r\n".utf8)
+        }
+        if let line = head.split(separator: "\r\n").first(where: { $0.hasPrefix("content-length:") }),
+           let length = Int(line.dropFirst("content-length:".count).trimmingCharacters(in: .whitespaces)) {
+            return bodyCount >= length
+        }
+        // No length information (e.g. 204 No Content): done unless a body might follow until EOF.
+        return head.hasPrefix("http/1.1 204") || head.hasPrefix("http/1.0 204") || head.hasPrefix("http/1.1 304")
     }
 
     private static func dechunk(_ data: Data) -> Data {

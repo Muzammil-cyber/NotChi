@@ -15,7 +15,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Build app and DMG
-        run: VERSION="${GITHUB_REF_NAME#v}" scripts/build-app.sh
+        run: SIGN_ID=- VERSION="${GITHUB_REF_NAME#v}" scripts/build-app.sh
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
