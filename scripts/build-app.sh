@@ -31,7 +31,7 @@ mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp "$BIN" "$APP/Contents/MacOS/NotChi"
 cp Resources/Info.plist "$APP/Contents/Info.plist"
 # License and third-party notices travel with the app (Apache 2.0 requires the latter).
-cp LICENSE THIRD_PARTY_NOTICES.md "$APP/Contents/Resources/"
+cp LICENSE.md THIRD_PARTY_NOTICES.md "$APP/Contents/Resources/"
 /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $VERSION" "$APP/Contents/Info.plist"
 if [[ -f Resources/AppIcon.icns ]]; then
   cp Resources/AppIcon.icns "$APP/Contents/Resources/"
@@ -48,7 +48,7 @@ if [[ -z "${SKIP_DMG:-}" ]]; then
   cp -R "$APP" "$STAGE/"
   ln -s /Applications "$STAGE/Applications"
   cp Resources/DMG/*.txt "$STAGE/" 2>/dev/null || true
-  cp LICENSE "$STAGE/License.md"
+  cp LICENSE.md "$STAGE/License.md"
   cp THIRD_PARTY_NOTICES.md "$STAGE/Third-Party Notices.md"
   rm -f "$OUT/NotChi.dmg"
   hdiutil create -volname "NotChi" -srcfolder "$STAGE" -ov -format UDZO "$OUT/NotChi.dmg" >/dev/null

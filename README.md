@@ -165,7 +165,7 @@ Push a tag like `v0.1.0`. GitHub Actions builds the DMG and attaches it to the r
 
 Copyright (c) 2026 Muhammad Muzammil Loya ([muzammilloya.dev](https://muzammilloya.dev)).
 
-NotChi is source-available under the [PolyForm Noncommercial License 1.0.0](LICENSE). You may use, modify and share it for **noncommercial** purposes (personal use, study, research, hobby projects, and use by charities, schools and similar organizations).
+NotChi is source-available under the [PolyForm Noncommercial License 1.0.0](LICENSE.md). You may use, modify and share it for **noncommercial** purposes (personal use, study, research, hobby projects, and use by charities, schools and similar organizations).
 
 Any commercial use needs a separate commercial license — selling it or a fork, bundling it in a paid product or service, or otherwise making money from it. To arrange one, get in touch via [muzammilloya.dev](https://muzammilloya.dev).
 
