@@ -329,7 +329,7 @@ class NearbyConnection {
         frame.v1.disconnection = Location_Nearby_Connections_DisconnectionFrame()
         if keys != nil {
             try? sendEncrypted(frame)
-        } else if let data = try? frame.serializedBytes() as Data? {
+        } else if let data: Data = try? frame.serializedBytes() {
             sendFrame(data)
         }
     }
@@ -339,8 +339,8 @@ class NearbyConnection {
         alert.type = type
         var msg = Securegcm_Ukey2Message()
         msg.messageType = .alert
-        if let alertData = try? alert.serializedBytes() as Data? { msg.messageData = alertData }
-        if let data = try? msg.serializedBytes() as Data? { sendFrame(data) }
+        if let alertData: Data = try? alert.serializedBytes() { msg.messageData = alertData }
+        if let data: Data = try? msg.serializedBytes() { sendFrame(data) }
     }
 
     func sendConnectionResponse() throws {

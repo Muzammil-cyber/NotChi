@@ -24,7 +24,7 @@ struct ClipboardView: View {
     @State private var query = ""
     @State private var filter: Filter = .all
     @State private var selection: UUID?
-    private var accessibility = AccessibilityStatus.shared
+    private let accessibility = AccessibilityStatus.shared
     @State private var needsAccessibilityHint = false
     @FocusState private var searchFocused: Bool
 

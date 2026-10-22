@@ -224,7 +224,7 @@ struct PortsSettingsPane: View {
 }
 
 struct PermissionsSettingsPane: View {
-    private var accessibility = AccessibilityStatus.shared
+    private let accessibility = AccessibilityStatus.shared
 
     var body: some View {
         Form {

@@ -6,7 +6,7 @@ import UniformTypeIdentifiers
 struct StashDropView: View {
     let store: StashStore
     @State private var targeted = false
-    private var settings = Settings.shared
+    private let settings = Settings.shared
 
     init(store: StashStore) { self.store = store }
 

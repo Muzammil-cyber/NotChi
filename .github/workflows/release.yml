@@ -12,13 +12,13 @@ jobs:
   build:
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Build app and DMG
         run: SIGN_ID=- VERSION="${GITHUB_REF_NAME#v}" scripts/build-app.sh
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: NotChi
           path: build/NotChi.dmg
