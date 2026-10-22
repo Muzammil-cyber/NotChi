@@ -5,7 +5,7 @@ HOW TO OPEN NOTCHI
 
 2. Open NotChi from Applications.
    macOS will warn that it can't check the app for malware.
-   This happens because NotChi is a free, open-source project
+   This happens because NotChi is a free, source-available project
    without a paid Apple Developer ID. Click "Done".
 
 3. Open System Settings → Privacy & Security.

@@ -1,6 +1,6 @@
 # NotChi
 
-A free, open-source command center that lives in your MacBook's notch. It shows a small pill at the top center on Macs without a notch.
+A free, source-available command center that lives in your MacBook's notch. It shows a small pill at the top center on Macs without a notch.
 
 Hover over the notch, or press **⌥⌘N**, to open it.
 
@@ -23,7 +23,7 @@ On the roadmap: a Now Playing controller and a calendar agenda with one-click me
 
 ### 🚀 macOS Gatekeeper notice
 
-Because this is a free, open-source project, the `.dmg` isn't signed with a paid Apple Developer ID. When you first open the app, macOS blocks it by default.
+Because this is a free, source-available project, the `.dmg` isn't signed with a paid Apple Developer ID. When you first open the app, macOS blocks it by default.
 
 To open the app safely, without any terminal commands:
 
@@ -163,4 +163,10 @@ Push a tag like `v0.1.0`. GitHub Actions builds the DMG and attaches it to the r
 
 ## License
 
-MIT
+Copyright (c) 2026 Muhammad Muzammil Loya ([muzammilloya.dev](https://muzammilloya.dev)).
+
+NotChi is source-available under the [PolyForm Noncommercial License 1.0.0](LICENSE). You may use, modify and share it for **noncommercial** purposes (personal use, study, research, hobby projects, and use by charities, schools and similar organizations).
+
+Any commercial use needs a separate commercial license — selling it or a fork, bundling it in a paid product or service, or otherwise making money from it. To arrange one, get in touch via [muzammilloya.dev](https://muzammilloya.dev).
+
+NotChi includes third-party components under their own licenses; see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

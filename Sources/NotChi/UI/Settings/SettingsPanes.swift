@@ -277,7 +277,14 @@ struct AboutSettingsPane: View {
                 .padding(.vertical, 4)
             }
             Section {
-                LabeledContent("License", value: "MIT")
+                LabeledContent("License", value: "PolyForm Noncommercial 1.0.0")
+                LabeledContent("Copyright", value: "© 2026 Muhammad Muzammil Loya")
+                LabeledContent("Commercial licensing") {
+                    Link("muzammilloya.dev", destination: URL(string: "https://muzammilloya.dev")!)
+                }
+                LabeledContent("Third-party components") {
+                    Text("NearDrop · Google Nearby · SwiftProtobuf").foregroundStyle(.secondary)
+                }
                 LabeledContent("Data") {
                     Button("Show in Finder") { NSWorkspace.shared.open(AppPaths.support) }
                 }
