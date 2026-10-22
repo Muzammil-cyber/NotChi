@@ -22,15 +22,11 @@ struct StashItem: Codable, Identifiable, Equatable {
 
     static var directory: URL { AppPaths.directory("stash") }
 
-    /// Current location of the underlying file, following moves via the bookmark.
+    /// Location of the underlying file. Deliberately no disk access here: views read it on
+    /// every redraw, and touching a file in Desktop/Documents or on an unmounted volume can
+    /// block on a privacy prompt or a mount. Moves are picked up by `StashStore.relocate`.
     var fileURL: URL? {
         if let storedFile { return Self.directory.appendingPathComponent(storedFile) }
-        if let bookmark {
-            var stale = false
-            if let url = try? URL(resolvingBookmarkData: bookmark, options: [], relativeTo: nil, bookmarkDataIsStale: &stale) {
-                return url
-            }
-        }
         return path.map { URL(fileURLWithPath: $0) }
     }
 
@@ -58,6 +54,7 @@ final class StashStore {
             items = decoded.filter(\.pinned)
         }
         removeOrphans()
+        relocate()
         let timer = Timer(timeInterval: 300, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated { self?.expire() }
         }
@@ -70,7 +67,48 @@ final class StashStore {
     func addFile(_ url: URL) {
         let key = "file:" + url.standardizedFileURL.resolvingSymlinksInPath().path
         guard !bringToFront(key: key) else { return }
-        insert(StashItem(kind: .file, path: url.path, bookmark: try? url.bookmarkData(), contentKey: key))
+        let item = StashItem(kind: .file, path: url.path, contentKey: key)
+        insert(item)
+        // Bookmarks let the item follow the file if it moves; creating one touches the disk.
+        Task.detached(priority: .utility) { [weak self] in
+            let bookmark = try? url.bookmarkData()
+            await self?.setBookmark(bookmark, for: item.id)
+        }
+    }
+
+    private func setBookmark(_ bookmark: Data?, for id: UUID) {
+        guard let bookmark, let index = items.firstIndex(where: { $0.id == id }) else { return }
+        items[index].bookmark = bookmark
+        save()
+    }
+
+    /// Resolves bookmarks in the background (never mounting volumes or showing UI) and
+    /// updates paths of files that moved since they were stashed.
+    private func relocate() {
+        let bookmarks = items.compactMap { item in item.bookmark.map { (item.id, $0) } }
+        guard !bookmarks.isEmpty else { return }
+        Task.detached(priority: .utility) { [weak self] in
+            var moved: [(UUID, String)] = []
+            for (id, bookmark) in bookmarks {
+                var stale = false
+                if let url = try? URL(resolvingBookmarkData: bookmark, options: [.withoutUI, .withoutMounting],
+                                      relativeTo: nil, bookmarkDataIsStale: &stale) {
+                    moved.append((id, url.path))
+                }
+            }
+            await self?.applyLocations(moved)
+        }
+    }
+
+    private func applyLocations(_ locations: [(UUID, String)]) {
+        var changed = false
+        for (id, path) in locations {
+            if let index = items.firstIndex(where: { $0.id == id }), items[index].path != path {
+                items[index].path = path
+                changed = true
+            }
+        }
+        if changed { save() }
     }
 
     func addImage(_ image: NSImage) {
@@ -142,9 +180,18 @@ final class StashStore {
     /// Duplicates a referenced file into the stash folder so it survives the original moving.
     func copyIntoStash(_ item: StashItem) {
         guard item.kind == .file, item.storedFile == nil, let source = item.fileURL,
-              let index = items.firstIndex(where: { $0.id == item.id }) else { return }
+              items.contains(where: { $0.id == item.id }) else { return }
         let name = UUID().uuidString + "-" + source.lastPathComponent
-        guard (try? FileManager.default.copyItem(at: source, to: StashItem.directory.appendingPathComponent(name))) != nil else { return }
+        let destination = StashItem.directory.appendingPathComponent(name)
+        // Copying can be slow (big files, network volumes) or prompt for folder access.
+        Task.detached(priority: .utility) { [weak self] in
+            let copied = (try? FileManager.default.copyItem(at: source, to: destination)) != nil
+            await self?.finishCopy(item.id, name: copied ? name : nil)
+        }
+    }
+
+    private func finishCopy(_ id: UUID, name: String?) {
+        guard let name, let index = items.firstIndex(where: { $0.id == id }) else { return }
         items[index].storedFile = name
         save()
     }

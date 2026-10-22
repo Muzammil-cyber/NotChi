@@ -11,7 +11,9 @@ Hover over the notch, or press **⌥⌘N**, to open it.
 | **Ports** | Lists the local dev servers that are listening, with a live health check and latency for each. One click kills a stuck process. |
 | **Stats** | CPU, memory pressure and network up/down next to the notch, with sparklines in the panel. |
 
-On the roadmap: Wi-Fi file transfer to and from your phone (QR code plus browser, no app needed), a Now Playing controller, and a calendar agenda with one-click meeting joins.
+| **Phone transfer** | Send and receive files with your iPhone (AirDrop) or Android phone (Quick Share). Choose your phone in Settings → Phone. |
+
+On the roadmap: a Now Playing controller and a calendar agenda with one-click meeting joins.
 
 ## Installation
 
@@ -82,11 +84,33 @@ rm -rf ~/Library/Application\ Support/NotChi
 defaults delete com.notchi.app
 ```
 
+## Phone transfer
+
+Pick your phone in **Settings → Phone** (iPhone, Android, Both or None). Only the services for that choice run, and with **None** nothing listens on the network.
+
+**iPhone (AirDrop)**
+- **Mac → iPhone:** drop files on **iPhone** next to the stash, or right-click a stash item → Send to iPhone. The system AirDrop picker opens.
+- **iPhone → Mac:** AirDrop as usual. When the file lands in Downloads, NotChi shows it in the notch and adds it to the stash.
+
+**Android (Quick Share)**
+- **Android → Mac:** in Quick Share on the phone, pick your Mac. The notch and a notification show the sender, the files and a PIN; nothing is saved until you click **Accept** (in either one). Progress shows around the notch.
+- **Mac → Android:** drop files on **Android** next to the stash. Scan the QR code in the notch with the phone's camera (Samsung: Quick Share → Receive → scan QR code), and the transfer starts.
+- Both devices must be on the **same Wi-Fi**. Some public or guest networks block devices from seeing each other.
+- **Why a QR code?** macOS doesn't let apps send the Bluetooth signal that makes Android phones discoverable, so the QR code takes its place.
+- The first time, macOS asks to allow **Local Network** access and possibly incoming connections. Allow both.
+
+Received files go to **Downloads** by default; pick another folder in Settings → Phone. AirDrop always saves to Downloads, so NotChi moves AirDrop arrivals into your folder.
+
+Quick Share support is adapted from [NearDrop](https://github.com/grishka/NearDrop) by Grishka (public domain).
+
 ## Permissions
 
 | Permission | Used for |
 | --- | --- |
 | Accessibility | Posting ⌘V into the frontmost app (auto-paste), and reading where menus and menu bar icons are so the stats wings never cover them. |
+| Local Network | Quick Share with Android phones (only when Android is selected). |
+| Downloads folder | Saving received files and noticing AirDrop arrivals (only when a phone is selected). |
+| Notifications | Incoming share requests (PIN, Accept / Decline) and finished transfers. Optional. |
 | None | Hover detection, the global shortcut (a Carbon hotkey), clipboard polling, system stats, port scanning (libproc, current user's processes). |
 
 NotChi skips clipboard items that password managers mark as concealed or transient. You can also exclude apps by bundle ID in Settings. All data stays local in `~/Library/Application Support/NotChi`.
@@ -117,7 +141,8 @@ Scripts, Raycast, or Shortcuts can drive NotChi with distributed notifications:
 | --- | --- |
 | `com.notchi.app.open` | optional tab: `clipboard`, `ports`, `stats` |
 | `com.notchi.app.close` | — |
-| `com.notchi.app.settings` | optional pane: `general`, `clipboard`, `ports`, `permissions`, `about` |
+| `com.notchi.app.settings` | optional pane: `general`, `clipboard`, `phone`, `ports`, `permissions`, `about` |
+| `com.notchi.app.send` | `iphone:/path/to/file` or `android:/path/to/file` (needs that phone enabled in Settings) |
 
 ## Architecture
 

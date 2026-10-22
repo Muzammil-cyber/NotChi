@@ -9,7 +9,8 @@ final class ClipboardModule: NotchModule {
 
     private let store = ClipboardStore()
     private let monitor = ClipboardMonitor()
-    private let stash = StashStore()
+    /// Shared with phone transfer, which drops received files into the stash.
+    let stash = StashStore()
 
     init() {
         monitor.onItem = { [store] item in store.add(item) }

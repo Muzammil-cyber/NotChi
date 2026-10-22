@@ -6,10 +6,13 @@ final class ModuleHost {
     let modules: [NotchModule]
     /// Persistent drop target pinned to the top of the expanded panel.
     let topAccessory: AnyView?
+    /// Phone transfers take over the wings and add a card while active.
+    let transfer: TransferCoordinator?
 
-    init(modules: [NotchModule], topAccessory: AnyView?) {
+    init(modules: [NotchModule], topAccessory: AnyView?, transfer: TransferCoordinator? = nil) {
         self.modules = modules
         self.topAccessory = topAccessory
+        self.transfer = transfer
     }
 
     var hasWings: Bool { leftWing != nil || rightWing != nil }

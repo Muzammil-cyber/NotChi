@@ -5,40 +5,64 @@ struct NotchRootView: View {
     let settings: Settings
     let host: ModuleHost
 
-    private var wingsVisible: Bool { state.leftWingWidth > 0 || state.rightWingWidth > 0 }
+    private var transferActive: Bool { host.transfer?.isActive ?? false }
+
+    /// A running transfer always gets some room beside the notch, even where the stats
+    /// wings have stepped aside for menus; it's brief and the user is waiting on it.
+    private var leftWidth: CGFloat { transferActive ? max(state.leftWingWidth, 56) : state.leftWingWidth }
+    private var rightWidth: CGFloat { transferActive ? max(state.rightWingWidth, 56) : state.rightWingWidth }
+
+    private var wingsVisible: Bool { leftWidth > 0 || rightWidth > 0 }
+
+    private var collapsedSize: CGSize {
+        let notch = state.geometry.notchSize
+        return CGSize(width: notch.width + leftWidth + rightWidth,
+                      height: state.geometry.collapsedHeight(withWings: wingsVisible))
+    }
 
     private var shapeSize: CGSize {
-        if state.isExpanded { return NotchGeometry.expandedSize }
-        let notch = state.geometry.notchSize
-        return CGSize(width: notch.width + state.leftWingWidth + state.rightWingWidth, height: notch.height)
+        state.isExpanded ? NotchGeometry.expandedSize : collapsedSize
     }
 
     /// Wings can differ in width, so the collapsed shape is shifted to keep the notch centered.
     private var shapeOffset: CGFloat {
-        state.isExpanded ? 0 : (state.rightWingWidth - state.leftWingWidth) / 2
+        state.isExpanded ? 0 : (rightWidth - leftWidth) / 2
     }
 
     var body: some View {
         let size = shapeSize
         let expanded = state.isExpanded
         ZStack(alignment: .top) {
-            NotchShape(topRadius: expanded ? 12 : 6, bottomRadius: expanded ? 24 : 9)
+            // Fixed full-panel canvas; only the path inside animates (see NotchShape).
+            NotchShape(size: size, offsetX: shapeOffset,
+                       topRadius: expanded ? 12 : 6, bottomRadius: expanded ? 24 : 9)
                 .fill(Color.black)
-                .frame(width: size.width, height: size.height)
                 // A shadow is an extra offscreen pass; skip it entirely while collapsed.
                 .shadow(color: expanded ? .black.opacity(0.5) : .clear, radius: expanded ? 16 : 0, y: expanded ? 10 : 0)
 
             if expanded {
+                // Fixed size and an opacity-only transition: scaling would re-rasterize all
+                // text every frame. The fade-in waits until the shape has mostly grown.
                 ExpandedContent(state: state, host: host)
-                    .frame(width: size.width - 24, height: size.height)
-                    .transition(.opacity.combined(with: .scale(scale: 0.96, anchor: .top)))
-            } else if wingsVisible {
-                CollapsedWings(host: host, state: state)
-                    .frame(width: size.width, height: size.height)
+                    .frame(width: NotchGeometry.expandedSize.width - 24, height: NotchGeometry.expandedSize.height)
+                    // Clip to the same animated silhouette so content (including AppKit-backed
+                    // scroll views, which ignore the fade) shrinks together with the background.
+                    .clipShape(NotchShape(size: size, offsetX: shapeOffset,
+                                          topRadius: expanded ? 12 : 6, bottomRadius: expanded ? 24 : 9))
+                    .transition(.asymmetric(
+                        insertion: .opacity.animation(.easeOut(duration: 0.16).delay(0.12)),
+                        removal: .opacity.animation(.easeIn(duration: 0.08))))
+            }
+
+            if !expanded && wingsVisible {
+                // Always laid out at the final collapsed size; only opacity animates.
+                CollapsedWings(host: host, state: state, left: leftWidth, right: rightWidth,
+                               transferActive: transferActive)
+                    .frame(width: collapsedSize.width, height: collapsedSize.height)
+                    .offset(x: shapeOffset)
                     .transition(.opacity)
             }
         }
-        .offset(x: shapeOffset)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .animation(.spring(response: 0.36, dampingFraction: 0.82), value: expanded)
         .animation(.easeInOut(duration: 0.2), value: state.leftWingWidth)
@@ -50,19 +74,26 @@ struct NotchRootView: View {
 private struct CollapsedWings: View {
     let host: ModuleHost
     let state: NotchState
+    let left: CGFloat
+    let right: CGFloat
+    let transferActive: Bool
 
     var body: some View {
-        let height = state.geometry.notchSize.height
+        let height = state.geometry.collapsedHeight(withWings: true)
         HStack(spacing: 0) {
-            if state.leftWingWidth > 0, let left = host.leftWing {
-                left.frame(width: state.leftWingWidth, height: height).clipped()
-            }
+            if left > 0 { wing(.left).frame(width: left, height: height).clipped() }
             Spacer(minLength: state.geometry.notchSize.width)
-            if state.rightWingWidth > 0, let right = host.rightWing {
-                right.frame(width: state.rightWingWidth, height: height).clipped()
-            }
+            if right > 0 { wing(.right).frame(width: right, height: height).clipped() }
         }
         .foregroundStyle(.white)
+    }
+
+    @ViewBuilder private func wing(_ side: TransferWing.Side) -> some View {
+        if transferActive, let transfer = host.transfer {
+            TransferWing(coordinator: transfer, side: side)
+        } else {
+            (side == .left ? host.leftWing : host.rightWing) ?? AnyView(Color.clear)
+        }
     }
 }
 
@@ -95,6 +126,11 @@ private struct ExpandedContent: View {
                 .foregroundStyle(.white.opacity(0.6))
             }
             .frame(height: max(state.geometry.notchSize.height, 26))
+
+            if let transfer = host.transfer, transfer.isActive {
+                TransferCard(coordinator: transfer)
+                    .transition(.opacity.combined(with: .move(edge: .top)))
+            }
 
             if let accessory = host.topAccessory {
                 accessory

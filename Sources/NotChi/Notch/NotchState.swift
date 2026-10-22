@@ -36,5 +36,6 @@ extension NotchGeometry {
         screenFrame = fallbackFrame
         hasNotch = false
         notchSize = CGSize(width: 190, height: 24)
+        menuBarHeight = 24
     }
 }

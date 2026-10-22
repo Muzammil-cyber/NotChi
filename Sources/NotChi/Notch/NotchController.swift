@@ -49,7 +49,10 @@ final class NotchController {
 
         NotificationCenter.default.addObserver(forName: NSApplication.didChangeScreenParametersNotification,
                                                object: nil, queue: .main) { [weak self] _ in
-            MainActor.assumeIsolated { self?.layout() }
+            MainActor.assumeIsolated {
+                self?.layout()
+                self?.updateWings()
+            }
         }
         outsideClickMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] _ in
             MainActor.assumeIsolated { self?.handleOutsideClick() }
@@ -203,8 +206,9 @@ final class NotchController {
 
     // MARK: - Wings vs. menu bar
 
-    /// Re-measures the menu bar every few seconds while collapsed, and right away
-    /// when the frontmost app (and so its menus) changes.
+    /// Re-measures the menu bar when it can change: the frontmost app (its menus) changes,
+    /// an app launches or quits (status icons), or the screen layout changes. A slow
+    /// 30 s timer catches icons that resize on their own.
     private func startMenuBarProbe() {
         let workspace = NSWorkspace.shared.notificationCenter
         workspace.addObserver(forName: NSWorkspace.didActivateApplicationNotification, object: nil, queue: .main) { [weak self] _ in
@@ -216,9 +220,16 @@ final class NotchController {
                     self?.menuBarProbe.invalidate()
                     self?.updateWings()
                 }
+                // Apps add their status icon a moment after launching; look again shortly.
+                DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                    MainActor.assumeIsolated {
+                        self?.menuBarProbe.invalidate()
+                        self?.updateWings()
+                    }
+                }
             }
         }
-        let timer = Timer(timeInterval: 5, repeats: true) { [weak self] _ in
+        let timer = Timer(timeInterval: 30, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated { self?.updateWings() }
         }
         RunLoop.main.add(timer, forMode: .common)

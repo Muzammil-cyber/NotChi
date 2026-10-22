@@ -6,8 +6,26 @@ import UniformTypeIdentifiers
 struct StashDropView: View {
     let store: StashStore
     @State private var targeted = false
+    private var settings = Settings.shared
+
+    init(store: StashStore) { self.store = store }
 
     var body: some View {
+        HStack(spacing: 6) {
+            stashStrip
+            // Phone send targets appear only for the platform(s) chosen in Settings.
+            if let transfer = TransferCoordinator.shared {
+                if settings.phonePlatform.usesAirDrop {
+                    SendDropTarget(title: "iPhone", systemImage: "iphone") { transfer.sendToiPhone($0) }
+                }
+                if settings.phonePlatform.usesQuickShare {
+                    SendDropTarget(title: "Android", systemImage: "candybarphone") { transfer.sendToAndroid($0) }
+                }
+            }
+        }
+    }
+
+    private var stashStrip: some View {
         ZStack {
             RoundedRectangle(cornerRadius: 10)
                 .fill(.white.opacity(targeted ? 0.10 : 0.03))
@@ -151,7 +169,14 @@ private struct StashChip: View {
     private var dragPreview: NSImage? {
         guard let url = item.fileURL else { return nil }
         if item.kind == .image, let image = Thumbnails.image(at: url) { return image }
-        return NSWorkspace.shared.icon(forFile: url.path)
+        return Self.typeIcon(for: url)
+    }
+
+    /// Icon from the file's type alone. `icon(forFile:)` would read the file itself, which can
+    /// block the main thread on a folder-access prompt or an unreachable volume.
+    static func typeIcon(for url: URL) -> NSImage {
+        let type = url.pathExtension.isEmpty ? UTType.folder : (UTType(filenameExtension: url.pathExtension) ?? .data)
+        return NSWorkspace.shared.icon(for: type)
     }
 
     private var contextMenu: NSMenu {
@@ -163,6 +188,10 @@ private struct StashChip: View {
                 menu.addItem(ClosureMenuItem("Copy into Stash") { store.copyIntoStash(item) })
             }
             menu.addItem(ClosureMenuItem("Reveal in Finder") { store.revealInFinder(item) })
+        }
+        if let url = item.fileURL, let transfer = TransferCoordinator.shared {
+            if transfer.canSendToiPhone { menu.addItem(ClosureMenuItem("Send to iPhone (AirDrop)") { transfer.sendToiPhone([url]) }) }
+            if transfer.canSendToAndroid { menu.addItem(ClosureMenuItem("Send to Android (Quick Share)") { transfer.sendToAndroid([url]) }) }
         }
         menu.addItem(.separator())
         menu.addItem(ClosureMenuItem("Remove") { store.remove(item) })
@@ -179,7 +208,7 @@ private struct StashChip: View {
             }
         case .file:
             if let url = item.fileURL {
-                Image(nsImage: NSWorkspace.shared.icon(forFile: url.path)).resizable().scaledToFit()
+                Image(nsImage: Self.typeIcon(for: url)).resizable().scaledToFit()
             } else {
                 Image(systemName: "doc").foregroundStyle(.white.opacity(0.6))
             }
@@ -188,5 +217,40 @@ private struct StashChip: View {
         case .link:
             Image(systemName: "link").foregroundStyle(.white.opacity(0.6))
         }
+    }
+}
+
+/// "Send to iPhone / Android" drop target beside the stash. Accepts files only.
+private struct SendDropTarget: View {
+    let title: String
+    let systemImage: String
+    let send: ([URL]) -> Void
+    @State private var targeted = false
+
+    var body: some View {
+        VStack(spacing: 3) {
+            Image(systemName: systemImage).font(.system(size: 15))
+            Text(title).font(.system(size: 10, weight: .medium))
+        }
+        .foregroundStyle(.white.opacity(targeted ? 0.95 : 0.55))
+        .frame(width: 64, height: 56)
+        .background(RoundedRectangle(cornerRadius: 10).fill(.white.opacity(targeted ? 0.12 : 0.03)))
+        .overlay(RoundedRectangle(cornerRadius: 10)
+            .strokeBorder(.white.opacity(targeted ? 0.6 : 0.2), style: StrokeStyle(lineWidth: 1, dash: [4])))
+        .help("Drop files here to send them to your \(title)")
+        .onDrop(of: [.fileURL], isTargeted: $targeted) { providers in
+            Task { @MainActor in
+                var urls: [URL] = []
+                for provider in providers where provider.canLoadObject(ofClass: URL.self) {
+                    let url: URL? = await withCheckedContinuation { continuation in
+                        _ = provider.loadObject(ofClass: URL.self) { value, _ in continuation.resume(returning: value) }
+                    }
+                    if let url, url.isFileURL { urls.append(url) }
+                }
+                send(urls)
+            }
+            return true
+        }
+        .onChange(of: targeted) { _, value in NotchState.shared.holdOpen("send-drop-\(title)", value) }
     }
 }

@@ -17,8 +17,25 @@ final class Settings {
     /// Bundle identifiers whose copies are never recorded.
     var clipboardExcludedApps: [String] { didSet { defaults.set(clipboardExcludedApps, forKey: "clipboardExcludedApps") } }
     var portsShowAll: Bool { didSet { defaults.set(portsShowAll, forKey: "portsShowAll") } }
+    /// Which phone transfer services run. Only the chosen platform's services start.
+    var phonePlatform: PhonePlatform { didSet { defaults.set(phonePlatform.rawValue, forKey: "phonePlatform") } }
+    /// Advertise this Mac to Android phones on the Wi-Fi (Quick Share receive).
+    var quickShareVisible: Bool { didSet { defaults.set(quickShareVisible, forKey: "quickShareVisible") } }
+    /// Folder for files received from phones; empty means ~/Downloads.
+    var receiveFolderPath: String { didSet { defaults.set(receiveFolderPath, forKey: "receiveFolderPath") } }
+    /// Notify (Notification Center) about incoming shares and finished transfers.
+    var transferNotifications: Bool { didSet { defaults.set(transferNotifications, forKey: "transferNotifications") } }
+    /// Put files received from a phone into the stash, ready to drag somewhere.
+    var addReceivedToStash: Bool { didSet { defaults.set(addReceivedToStash, forKey: "addReceivedToStash") } }
     /// Off by default: the icon would sit right beside the notch, under the stats wing.
     var showMenuBarIcon: Bool { didSet { defaults.set(showMenuBarIcon, forKey: "showMenuBarIcon") } }
+
+    static let downloadsFolder = FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask)[0]
+
+    /// Where received files go (the chosen folder, or Downloads).
+    var receiveFolder: URL {
+        receiveFolderPath.isEmpty ? Self.downloadsFolder : URL(fileURLWithPath: receiveFolderPath, isDirectory: true)
+    }
 
     private init() {
         defaults.register(defaults: [
@@ -29,6 +46,11 @@ final class Settings {
             "clipboardExcludedApps": ["com.apple.keychainaccess", "com.1password.1password", "com.bitwarden.desktop"],
             "portsShowAll": false,
             "showMenuBarIcon": false,
+            "phonePlatform": PhonePlatform.none.rawValue,
+            "quickShareVisible": true,
+            "addReceivedToStash": true,
+            "receiveFolderPath": "",
+            "transferNotifications": true,
         ])
         showWings = defaults.bool(forKey: "showWings")
         hoverToExpand = defaults.bool(forKey: "hoverToExpand")
@@ -37,7 +59,30 @@ final class Settings {
         clipboardExcludedApps = defaults.stringArray(forKey: "clipboardExcludedApps") ?? []
         portsShowAll = defaults.bool(forKey: "portsShowAll")
         showMenuBarIcon = defaults.bool(forKey: "showMenuBarIcon")
+        phonePlatform = PhonePlatform(rawValue: defaults.string(forKey: "phonePlatform") ?? "") ?? .none
+        quickShareVisible = defaults.bool(forKey: "quickShareVisible")
+        addReceivedToStash = defaults.bool(forKey: "addReceivedToStash")
+        receiveFolderPath = defaults.string(forKey: "receiveFolderPath") ?? ""
+        transferNotifications = defaults.bool(forKey: "transferNotifications")
     }
+}
+
+enum PhonePlatform: String, CaseIterable, Identifiable {
+    case none, iPhone, android, both
+
+    var id: String { rawValue }
+
+    var label: String {
+        switch self {
+        case .none: "None"
+        case .iPhone: "iPhone"
+        case .android: "Android"
+        case .both: "Both"
+        }
+    }
+
+    var usesAirDrop: Bool { self == .iPhone || self == .both }
+    var usesQuickShare: Bool { self == .android || self == .both }
 }
 
 /// A small fixed set of global shortcuts; avoids building a full key recorder for the MVP.

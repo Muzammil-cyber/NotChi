@@ -2,7 +2,7 @@ import AppKit
 import SwiftUI
 
 enum SettingsTab: String, CaseIterable, Identifiable {
-    case general, clipboard, ports, permissions, about
+    case general, clipboard, phone, ports, permissions, about
 
     var id: Self { self }
 
@@ -10,6 +10,7 @@ enum SettingsTab: String, CaseIterable, Identifiable {
         switch self {
         case .general: "General"
         case .clipboard: "Clipboard"
+        case .phone: "Phone"
         case .ports: "Ports"
         case .permissions: "Permissions"
         case .about: "About"
@@ -20,6 +21,7 @@ enum SettingsTab: String, CaseIterable, Identifiable {
         switch self {
         case .general: "gearshape"
         case .clipboard: "doc.on.clipboard"
+        case .phone: "iphone.gen3"
         case .ports: "network"
         case .permissions: "hand.raised"
         case .about: "info.circle"
@@ -94,6 +96,7 @@ struct SettingsView: View {
         switch activeTab {
         case .general: GeneralSettingsPane()
         case .clipboard: ClipboardSettingsPane()
+        case .phone: PhoneSettingsPane()
         case .ports: PortsSettingsPane()
         case .permissions: PermissionsSettingsPane()
         case .about: AboutSettingsPane()

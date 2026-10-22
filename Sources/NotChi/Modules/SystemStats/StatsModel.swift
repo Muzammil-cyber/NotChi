@@ -63,12 +63,19 @@ final class StatsModel {
 
     private func updateRunState() {
         let shouldRun = observing && (Settings.shared.showWings || tabVisible)
+        // The glanceable wings refresh every 2 s (each refresh re-lays out the panel);
+        // the Stats tab, where sparklines are watched, refreshes every second.
+        let interval: TimeInterval = tabVisible ? 1 : 2
+        if shouldRun, let current = timer, current.timeInterval != interval {
+            current.invalidate()
+            timer = nil
+        }
         if shouldRun, timer == nil {
             tick()
-            let t = Timer(timeInterval: 1, repeats: true) { [weak self] _ in
+            let t = Timer(timeInterval: interval, repeats: true) { [weak self] _ in
                 MainActor.assumeIsolated { self?.tick() }
             }
-            t.tolerance = 0.1
+            t.tolerance = interval * 0.1
             RunLoop.main.add(t, forMode: .common)
             timer = t
         } else if !shouldRun, timer != nil {

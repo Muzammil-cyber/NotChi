@@ -14,9 +14,21 @@ struct NotchGeometry: Equatable {
     static let minWingWidth: CGFloat = 54
     static let expandedSize = CGSize(width: 720, height: 330)
 
+    /// Height of the menu bar on this screen. It can be a point taller than the hardware
+    /// notch (33 vs 32 pt), so wings use it to sit flush with the menu bar's bottom edge.
+    var menuBarHeight: CGFloat
+
+    /// Height of the collapsed shape: the notch alone hides under the hardware cutout, but
+    /// once wings show they must cover the full menu bar height or a sliver peeks out below.
+    func collapsedHeight(withWings: Bool) -> CGFloat {
+        withWings ? max(notchSize.height, menuBarHeight) : notchSize.height
+    }
+
     init(screen: NSScreen) {
         screenFrame = screen.frame
+        let menuBar = screen.frame.maxY - screen.visibleFrame.maxY
         let topInset = screen.safeAreaInsets.top
+        menuBarHeight = menuBar > 0 ? menuBar : topInset
         if topInset > 0,
            let left = screen.auxiliaryTopLeftArea,
            let right = screen.auxiliaryTopRightArea {
@@ -25,7 +37,6 @@ struct NotchGeometry: Equatable {
         } else {
             hasNotch = false
             // Match the menu bar height so the pill sits flush with the top edge.
-            let menuBar = screen.frame.maxY - screen.visibleFrame.maxY
             notchSize = CGSize(width: 190, height: max(menuBar, 24))
         }
     }
@@ -51,8 +62,9 @@ struct NotchGeometry: Equatable {
     /// Global-coordinate rect of the collapsed shape: the notch plus whatever wings are shown.
     func collapsedRect(leftWing: CGFloat, rightWing: CGFloat) -> CGRect {
         let notch = notchRect
-        return CGRect(x: notch.minX - leftWing, y: notch.minY,
-                      width: notch.width + leftWing + rightWing, height: notch.height)
+        let height = collapsedHeight(withWings: leftWing > 0 || rightWing > 0)
+        return CGRect(x: notch.minX - leftWing, y: screenFrame.maxY - height,
+                      width: notch.width + leftWing + rightWing, height: height)
     }
 
     /// Width a wing may take given the nearest menu bar content on that side.

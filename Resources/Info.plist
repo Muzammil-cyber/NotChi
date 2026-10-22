@@ -26,6 +26,14 @@
     <true/>
     <key>NSHighResolutionCapable</key>
     <true/>
+    <key>NSLocalNetworkUsageDescription</key>
+    <string>NotChi uses the local network to send and receive files with Android phones via Quick Share.</string>
+    <key>NSBonjourServices</key>
+    <array>
+        <string>_FC9F5ED42C8A._tcp</string>
+    </array>
+    <key>NSDownloadsFolderUsageDescription</key>
+    <string>NotChi saves files received from your phone to Downloads and shows new AirDrop arrivals in the notch.</string>
     <key>NSHumanReadableCopyright</key>
     <string>MIT License</string>
 </dict>

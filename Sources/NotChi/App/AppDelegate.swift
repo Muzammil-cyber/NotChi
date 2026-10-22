@@ -6,6 +6,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     static private(set) weak var shared: AppDelegate?
 
     private var host: ModuleHost!
+    private var transfer: TransferCoordinator?
     private var controller: NotchController!
     private var statusItem: NSStatusItem?
 
@@ -15,7 +16,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let clipboard = ClipboardModule()
         let stats = SystemStatsModule()
         let ports = PortSniperModule()
-        host = ModuleHost(modules: [clipboard, ports, stats], topAccessory: clipboard.makeStashView())
+        transfer = TransferCoordinator(stash: clipboard.stash)
+        host = ModuleHost(modules: [clipboard, ports, stats], topAccessory: clipboard.makeStashView(), transfer: transfer)
         host.startAll()
 
         controller = NotchController(host: host)
@@ -26,7 +28,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     /// Lets scripts (Raycast, Shortcuts, shell) drive the notch:
     /// post `com.notchi.app.open` with an optional module id ("clipboard", "ports", "stats")
-    /// as the object, `com.notchi.app.close`, or `com.notchi.app.settings` with an optional tab id.
+    /// as the object, `com.notchi.app.close`, `com.notchi.app.settings` with an optional tab id,
+    /// or `com.notchi.app.send` with "iphone:<path>" / "android:<path>".
     private func observeAutomation() {
         let center = DistributedNotificationCenter.default()
         center.addObserver(forName: .init("com.notchi.app.open"), object: nil, queue: .main) { note in
@@ -39,6 +42,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         center.addObserver(forName: .init("com.notchi.app.close"), object: nil, queue: .main) { _ in
             MainActor.assumeIsolated { NotchController.shared.collapse() }
         }
+        // Object: "iphone:/path/to/file" or "android:/path/to/file".
+        center.addObserver(forName: .init("com.notchi.app.send"), object: nil, queue: .main) { note in
+            guard let spec = note.object as? String, let colon = spec.firstIndex(of: ":") else { return }
+            let target = spec[..<colon].lowercased()
+            let url = URL(fileURLWithPath: String(spec[spec.index(after: colon)...]))
+            MainActor.assumeIsolated {
+                guard let transfer = TransferCoordinator.shared else { return }
+                if target == "android", transfer.canSendToAndroid { transfer.sendToAndroid([url]) }
+                if target == "iphone", transfer.canSendToiPhone { transfer.sendToiPhone([url]) }
+            }
+        }
         center.addObserver(forName: .init("com.notchi.app.settings"), object: nil, queue: .main) { note in
             let tab = (note.object as? String).flatMap(SettingsTab.init(rawValue:))
             MainActor.assumeIsolated { AppDelegate.shared?.showSettings(tab: tab) }
@@ -47,6 +61,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationWillTerminate(_ notification: Notification) {
         host?.stopAll()
+        transfer?.stop()
     }
 
     func showSettings(tab: SettingsTab? = nil) {
