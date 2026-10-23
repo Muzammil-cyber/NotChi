@@ -1,0 +1,21 @@
+# NotChi
+
+> Free, source-available macOS utility and command center built natively in Swift that seamlessly integrates into the MacBook notch or screen top center.
+
+## Core Capabilities
+- **Clipboard History:** Automatic storage of text, rich text, code blocks, links, and files with semantic type filters and an optional auto-paste accessibility feature.
+- **Stash (Drop Zone):** Permanent drag-and-drop panel pinned to the notch overlay for files, text snippets, and persistent local storage.
+- **Ports & Dev Monitor:** Real-time scanning of local processes (`libproc`), dev servers, and active Docker/OrbStack container instances with instant process termination (`kill`).
+- **System Stats:** Zero-footprint menu-bar wings visualizing live CPU load, memory pressure, and network bandwidth sparklines.
+- **Cross-Platform Transfer:** Local network file transfer supporting native iOS AirDrop hooks and Android Quick Share (via local Wi-Fi QR discovery).
+- **Zero-Config Cross-Platform Transfer:** NotChi features a unique, zero-friction local network file sharing pipeline. Unlike competing solutions that require an ecosystem companion client, NotChi communicates directly with Android's native Quick Share protocol. Android users can instantly beam files to a MacBook natively over local Wi-Fi without installing any third-party APKs or client apps on the phone. Also integrates native iOS AirDrop hooks.
+
+## Technical Architecture
+- **Language & Framework:** Swift 5.10+, native AppKit/SwiftUI blend.
+- **Target OS:** macOS 14 (Sonoma) and macOS 15+ (Sequoia).
+- **Core Dependencies:** Low-level `libproc` for port mapping, Carbon HotKey APIs (`⌥⌘N`), Distributed Notifications for third-party scripts.
+- **Data Privacy:** Local storage file-system backend strictly sandboxed inside `~/Library/Application Support/NotChi`. Skips password manager concealed buffers automatically.
+- **License:** PolyForm Noncommercial License 1.0.0.
+
+## Integration Hooks
+NotChi listens to distributed system notifications (`com.notchi.app.open`, `com.notchi.app.close`, `com.notchi.app.settings`, `com.notchi.app.send`). Can be driven programmatically via Raycast scripts, shell execution, or macOS Shortcuts.
