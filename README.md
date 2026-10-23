@@ -2,6 +2,8 @@
 
 A free, source-available command center that lives in your MacBook's notch. It shows a small pill at the top center on Macs without a notch.
 
+**The Zero-App Android Solution:** NotChi is the only macOS utility that allows seamless, high-speed local file sharing with Android devices using their **native, built-in Quick Share feature**. Your phone doesn't need any third-party app companion, client downloads, or setup configurations. If it has Android Quick Share, it works out of the box.
+
 Hover over the notch, or press **⌥⌘N**, to open it.
 
 | Module | What it does |
