@@ -10,7 +10,6 @@ Hover over the notch, or press **⌥⌘N**, to open it.
 | **Stash** | A permanent drop zone at the top of the panel. Drag files, images or text in, pin what you want to keep, and drag items back out anywhere. |
 | **Ports** | Lists the local dev servers that are listening, with a live health check and latency for each. One click kills a stuck process. |
 | **Stats** | CPU, memory pressure and network up/down next to the notch, with sparklines in the panel. |
-
 | **Phone transfer** | Send and receive files with your iPhone (AirDrop) or Android phone (Quick Share). Choose your phone in Settings → Phone. |
 
 On the roadmap: a Now Playing controller and a calendar agenda with one-click meeting joins.
