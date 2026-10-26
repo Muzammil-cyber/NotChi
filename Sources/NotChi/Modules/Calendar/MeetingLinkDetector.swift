@@ -31,8 +31,9 @@ struct MeetingLink: Equatable {
         app.scheme = "zoommtg"
         app.host = components.host
         app.path = "/join"
-        app.queryItems = [URLQueryItem(name: "confno", value: String(parts[1]))]
-            + (components.queryItems?.filter { $0.name == "pwd" } ?? [])
+        var query: [URLQueryItem] = [URLQueryItem(name: "confno", value: String(parts[1]))]
+        if let password = components.queryItems?.first(where: { $0.name == "pwd" }) { query.append(password) }
+        app.queryItems = query
         return app.url
     }
 }

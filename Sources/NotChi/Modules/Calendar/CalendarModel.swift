@@ -33,6 +33,34 @@ struct ReminderItem: Identifiable, Equatable {
     let hasTime: Bool
     let color: Color
 
+    init(id: String, title: String, due: Date?, hasTime: Bool, color: Color) {
+        self.id = id
+        self.title = title
+        self.due = due
+        self.hasTime = hasTime
+        self.color = color
+    }
+
+    /// Copies what the agenda needs. Kept out of closures with explicit types: inline, the
+    /// expression is too much for some Swift versions' type checker.
+    init(reminder: EKReminder) {
+        let components: DateComponents? = reminder.dueDateComponents
+        let title: String = reminder.title ?? ""
+        let cgColor: CGColor = reminder.calendar?.cgColor ?? NSColor.systemOrange.cgColor
+        self.init(id: reminder.calendarItemIdentifier,
+                  title: title.isEmpty ? "Untitled" : title,
+                  due: components.flatMap { Calendar.current.date(from: $0) },
+                  hasTime: components?.hour != nil,
+                  color: Color(cgColor: cgColor))
+    }
+
+    /// Earliest due first (undated last), then by title.
+    static func dueOrder(_ a: ReminderItem, _ b: ReminderItem) -> Bool {
+        let aDue = a.due ?? .distantFuture
+        let bDue = b.due ?? .distantFuture
+        return aDue != bDue ? aDue < bDue : a.title < b.title
+    }
+
     func isOverdue(now: Date) -> Bool {
         guard let due else { return false }
         return hasTime ? due < now : due < Calendar.current.startOfDay(for: now)
@@ -269,23 +297,13 @@ final class CalendarModel {
         let dayEnd = calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: Date()))!
         let predicate = store.predicateForIncompleteReminders(withDueDateStarting: nil, ending: dayEnd, calendars: nil)
         store.fetchReminders(matching: predicate) { found in
-            let items = (found ?? []).map { reminder in
-                let components = reminder.dueDateComponents
-                return ReminderItem(
-                    id: reminder.calendarItemIdentifier,
-                    title: reminder.title?.isEmpty == false ? reminder.title! : "Untitled",
-                    due: components.flatMap { Calendar.current.date(from: $0) },
-                    hasTime: components?.hour != nil,
-                    color: Color(cgColor: reminder.calendar?.cgColor ?? NSColor.systemOrange.cgColor)
-                )
-            }
-            .sorted { ($0.due ?? .distantFuture, $0.title) < ($1.due ?? .distantFuture, $1.title) }
+            let items = (found ?? []).map(ReminderItem.init(reminder:))
             Task { @MainActor in
                 let model = CalendarModel.shared
                 // Keep just-ticked items until their checkmark has been seen.
                 let pending = model.reminders.filter { model.completingIDs.contains($0.id) }
                 let merged = items.filter { !model.completingIDs.contains($0.id) } + pending
-                let sorted = merged.sorted { ($0.due ?? .distantFuture, $0.title) < ($1.due ?? .distantFuture, $1.title) }
+                let sorted = merged.sorted(by: ReminderItem.dueOrder)
                 if model.reminders != sorted {
                     model.reminders = sorted
                     model.updateImminent()
