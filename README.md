@@ -162,16 +162,16 @@ swift -e 'import Foundation; DistributedNotificationCenter.default().postNotific
 
 ```
 Sources/NotChi/
-  App/        entry point, AppDelegate (menu bar item), Settings
-  Notch/      NotchPanel (non-activating overlay), NotchController (hover/hotkey/collapse),
-              NotchGeometry (notch detection), HotKey (Carbon), ModuleHost
-  UI/         NotchRootView, NotchShape, tab bar, settings
-  Modules/    one folder per feature, each implementing the NotchModule protocol;
-              Overview shows Now Playing and Calendar side by side
+  App/        entry point, AppDelegate (creates the modules), Settings
+  Notch/      the shell: panel, controller, ModuleHost, menu-bar probe
+  UI/         NotchRootView, tab bar, settings window (one file per pane)
+  Modules/    one folder per tab, mirroring the notch:
+              Overview/ (NowPlaying/, Calendar/), Clipboard/, Dev/ (PortSniper/),
+              plus SystemStats/ and Transfer/
 Vendor/       mediaremote-adapter (BSD-3), built by scripts/build-mediaremote-adapter.sh
 ```
 
-To add a feature, implement `NotchModule` (see `Modules/Module.swift`) and register it in `AppDelegate`, either as a tab or as an Overview pane.
+**[ARCHITECTURE.md](ARCHITECTURE.md)** is the map of the code: the `NotchModule` interface, where each feature lives, how a hover or automation request flows, and a "to change X, edit Y" table. To add a feature, implement `NotchModule` (`Modules/Module.swift`) and register it in `AppDelegate`, either as a tab, an Overview pane or a Dev tool.
 
 **Now Playing on macOS 15.4+:** apps can no longer read MediaRemote directly. NotChi bundles [mediaremote-adapter](https://github.com/ungive/mediaremote-adapter), which runs under the system's `/usr/bin/perl` and streams changes as JSON lines. `scripts/build-app.sh` builds it automatically; for `swift run`, run `scripts/build-mediaremote-adapter.sh` once.
 

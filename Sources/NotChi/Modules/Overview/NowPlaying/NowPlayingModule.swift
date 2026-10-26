@@ -18,12 +18,11 @@ final class NowPlayingModule: NotchModule {
 
     var isEnabled: Bool { settings.nowPlayingEnabled }
 
-    var claimsWings: Bool {
-        settings.nowPlayingEnabled && settings.nowPlayingInWings && model.isPlaying && model.hasMedia
+    /// While something plays: just the artwork and the equalizer, hugging the notch.
+    var wingClaim: WingClaim? {
+        guard settings.nowPlayingEnabled, settings.nowPlayingInWings, model.isPlaying, model.hasMedia else { return nil }
+        return WingClaim(width: 36)
     }
-
-    /// Just the artwork and the equalizer.
-    var claimedWingWidth: CGFloat? { 36 }
 
     func makeExpandedView() -> AnyView { AnyView(NowPlayingExpandedView(model: model)) }
     func makeLeftWing() -> AnyView? { AnyView(NowPlayingLeftWing(model: model)) }

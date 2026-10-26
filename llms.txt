@@ -13,7 +13,7 @@ Key facts:
 ## Docs
 
 - [README](https://github.com/Muzammil-cyber/NotChi/blob/main/README.md): features, installation and Gatekeeper steps, permissions, building from source, automation.
-- [Architecture](https://github.com/Muzammil-cyber/NotChi/blob/main/README.md#architecture): folder layout. Each feature is a `NotchModule` (`Sources/NotChi/Modules/Module.swift`) registered in `Sources/NotChi/App/AppDelegate.swift`.
+- [Architecture](https://github.com/Muzammil-cyber/NotChi/blob/main/ARCHITECTURE.md): the code map. Covers the `NotchModule` interface (`Sources/NotChi/Modules/Module.swift`), the folder tree (it mirrors the notch's tabs), request flow, a "to change X, edit Y" table, and resource rules.
 - [License](https://github.com/Muzammil-cyber/NotChi/blob/main/LICENSE.md): PolyForm Noncommercial 1.0.0. Commercial use needs a separate license from the author.
 - [Third-party notices](https://github.com/Muzammil-cyber/NotChi/blob/main/THIRD_PARTY_NOTICES.md): NearDrop (public domain), Google Nearby protos (Apache 2.0), SwiftProtobuf (Apache 2.0), mediaremote-adapter (BSD 3-Clause).
 - [Citation](https://github.com/Muzammil-cyber/NotChi/blob/main/CITATION.cff): machine-readable author and license metadata.

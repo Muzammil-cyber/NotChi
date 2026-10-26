@@ -13,9 +13,9 @@ final class ModuleHost {
     /// Modules without a tab (system stats): they supply wings and header readouts and
     /// count as visible whenever the panel is open.
     let background: [NotchModule]
-    /// Every module, including the panes inside Overview, in wing-priority order.
+    /// Every module: each tab followed by its children, then background modules. This order
+    /// is also wing priority (see `wingClaimant`).
     let allModules: [NotchModule]
-    let overview: OverviewModule?
     /// Persistent drop target pinned to the top of the expanded panel.
     let topAccessory: AnyView?
     /// Compact readouts in the header, left of the settings button.
@@ -27,8 +27,7 @@ final class ModuleHost {
          headerAccessory: AnyView? = nil, transfer: TransferCoordinator? = nil) {
         self.tabs = tabs
         self.background = background
-        self.overview = tabs.lazy.compactMap { $0 as? OverviewModule }.first
-        self.allModules = tabs.flatMap { tab in [tab] + ((tab as? OverviewModule)?.panes ?? []) } + background
+        self.allModules = tabs.flatMap { [$0] + $0.children } + background
         self.topAccessory = topAccessory
         self.headerAccessory = headerAccessory
         self.transfer = transfer
@@ -41,10 +40,10 @@ final class ModuleHost {
     private(set) lazy var leftWing: AnyView? = background.lazy.compactMap { $0.makeLeftWing() }.first
     private(set) lazy var rightWing: AnyView? = background.lazy.compactMap { $0.makeRightWing() }.first
 
-    /// The module currently claiming the wings, if any: an urgent claim (a meeting about
-    /// to start) first, then module order (music before an ongoing meeting).
+    /// The module currently claiming the wings, if any: an urgent claim (an event about to
+    /// start) first, then module order (music before anything else).
     var wingClaimant: NotchModule? {
-        allModules.first { $0.claimsWings && $0.wingNeedsRoom } ?? allModules.first { $0.claimsWings }
+        allModules.first { $0.wingClaim?.urgent == true } ?? allModules.first { $0.wingClaim != nil }
     }
 
     private var claimedWings: [String: (left: AnyView, right: AnyView)] = [:]
@@ -68,14 +67,13 @@ final class ModuleHost {
     /// Tabs the user hasn't turned off, in order.
     var enabledTabs: [NotchModule] { tabs.filter(\.isEnabled) }
 
-    /// Maps an automation id to an enabled tab: Overview's panes ("nowplaying", "calendar")
-    /// open Overview, Dev's tools ("ports") open Dev.
+    /// Maps an automation id to an enabled tab. A child's id ("nowplaying", "ports") opens
+    /// its container tab with that child revealed.
     func tabID(for id: String) -> String? {
         for tab in enabledTabs {
             if tab.id == id { return id }
-            if let overview = tab as? OverviewModule, overview.contains(paneID: id) { return tab.id }
-            if let dev = tab as? DevModule, dev.contains(toolID: id) {
-                dev.select(toolID: id)
+            if tab.children.contains(where: { $0.id == id }) {
+                tab.reveal(childID: id)
                 return tab.id
             }
         }

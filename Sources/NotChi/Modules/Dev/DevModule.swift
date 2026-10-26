@@ -28,13 +28,13 @@ final class DevModule: NotchModule {
 
     var isEnabled: Bool { settings.devEnabled }
 
+    var children: [NotchModule] { tools }
+
     var selectedTool: NotchModule? { tools.first { $0.id == selectedToolID } ?? tools.first }
 
-    func contains(toolID: String) -> Bool { tools.contains { $0.id == toolID } }
-
-    func select(toolID: String) {
-        guard contains(toolID: toolID) else { return }
-        selectedToolID = toolID
+    func reveal(childID: String) {
+        guard tools.contains(where: { $0.id == childID }) else { return }
+        selectedToolID = childID
         syncVisibility()
     }
 
@@ -83,7 +83,7 @@ private struct DevView: View {
                 .pickerStyle(.segmented)
                 .labelsHidden()
                 .fixedSize()
-                .onChange(of: selection) { _, id in module.select(toolID: id) }
+                .onChange(of: selection) { _, id in module.reveal(childID: id) }
             }
             if let tool = module.tools.first(where: { $0.id == selection }) {
                 module.view(for: tool)

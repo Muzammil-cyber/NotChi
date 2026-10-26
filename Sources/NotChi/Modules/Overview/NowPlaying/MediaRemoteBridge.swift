@@ -27,10 +27,7 @@ final class MediaRemoteBridge: @unchecked Sendable {
         // filled by scripts/build-mediaremote-adapter.sh.
         var roots: [URL] = []
         if let resources = Bundle.main.resourceURL { roots.append(resources) }
-        let repo = URL(fileURLWithPath: #filePath)
-            .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
-            .deletingLastPathComponent().deletingLastPathComponent()
-        roots.append(repo.appendingPathComponent("build"))
+        if let repo = AppPaths.sourceRoot { roots.append(repo.appendingPathComponent("build")) }
         for root in roots {
             let script = root.appendingPathComponent("mediaremote-adapter.pl")
             let framework = root.appendingPathComponent("MediaRemoteAdapter.framework")

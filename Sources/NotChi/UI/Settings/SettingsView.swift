@@ -57,10 +57,8 @@ final class SettingsNavigation {
 enum AppLogo {
     static let image: NSImage = {
         if Bundle.main.bundleURL.pathExtension == "app" { return NSApp.applicationIconImage }
-        let repo = URL(fileURLWithPath: #filePath)
-            .deletingLastPathComponent().deletingLastPathComponent()
-            .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
-        return NSImage(contentsOf: repo.appendingPathComponent("Resources/AppIcon.icns")) ?? NSApp.applicationIconImage
+        let icon = AppPaths.sourceRoot?.appendingPathComponent("Resources/AppIcon.icns")
+        return icon.flatMap(NSImage.init(contentsOf:)) ?? NSApp.applicationIconImage
     }()
 }
 

@@ -6,7 +6,7 @@
 import SwiftUI
 
 /// Calendar: today's agenda with one-click meeting joins, as a section of the Overview
-/// tab, plus a countdown beside the notch from five minutes before a meeting.
+/// tab, plus a countdown beside the notch from five minutes before an event or reminder.
 @MainActor
 final class CalendarModule: NotchModule {
     let id = "calendar"
@@ -18,13 +18,11 @@ final class CalendarModule: NotchModule {
 
     var isEnabled: Bool { settings.calendarEnabled }
 
-    var claimsWings: Bool {
-        settings.calendarEnabled && settings.calendarInWings && model.imminent != nil
+    /// From 5 minutes before an event or timed reminder: an icon on one side, "12m" on the other.
+    var wingClaim: WingClaim? {
+        guard settings.calendarEnabled, settings.calendarInWings, model.imminent != nil else { return nil }
+        return WingClaim(urgent: model.imminentIsUrgent, width: 40)
     }
-
-    var wingNeedsRoom: Bool { model.imminentIsUrgent }
-    /// An icon on one side, "12m" on the other.
-    var claimedWingWidth: CGFloat? { 40 }
 
     func makeExpandedView() -> AnyView { AnyView(CalendarExpandedView(model: model)) }
     func makeLeftWing() -> AnyView? { AnyView(CalendarLeftWing(model: model)) }

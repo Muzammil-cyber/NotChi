@@ -14,9 +14,9 @@ struct NotchRootView: View {
     /// A module (Now Playing, an upcoming meeting) using the wings instead of the stats.
     private var claimant: NotchModule? { transferActive ? nil : host.wingClaimant }
 
-    /// A running transfer or an imminent meeting always gets some room beside the notch,
-    /// even where the stats wings have stepped aside for menus; both are brief.
-    private var needsRoom: Bool { transferActive || claimant?.wingNeedsRoom == true }
+    /// A running transfer or an urgent claim always gets some room beside the notch, even
+    /// where the stats wings have stepped aside for menus; both are brief.
+    private var needsRoom: Bool { transferActive || claimant?.wingClaim?.urgent == true }
     /// Stats wings only show when turned on; a claimant can show even when they're off.
     private var wingsAllowed: Bool { needsRoom || claimant != nil || settings.showWings }
     private var leftWidth: CGFloat { width(state.leftWingWidth) }
@@ -27,7 +27,7 @@ struct NotchRootView: View {
         let width = needsRoom ? max(measured, 56) : measured
         // A claimant with compact content hugs the notch, but never takes more than the
         // menus leave free.
-        if let preferred = claimant?.claimedWingWidth, width > 0 { return min(width, preferred) }
+        if let preferred = claimant?.wingClaim?.width, width > 0 { return min(width, preferred) }
         return width
     }
 

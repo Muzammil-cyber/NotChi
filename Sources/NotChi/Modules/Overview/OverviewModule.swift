@@ -21,10 +21,10 @@ final class OverviewModule: NotchModule {
         self.panes = panes
     }
 
+    var children: [NotchModule] { panes }
+
     /// Panes the user hasn't turned off, in display order.
     var enabledPanes: [NotchModule] { panes.filter(\.isEnabled) }
-
-    func contains(paneID: String) -> Bool { panes.contains { $0.id == paneID } }
 
     func view(for pane: NotchModule) -> AnyView {
         if let view = views[pane.id] { return view }
