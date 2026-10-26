@@ -1,3 +1,8 @@
+// NotChi — https://github.com/Muzammil-cyber/NotChi
+// Copyright (c) 2026 Muhammad Muzammil Loya (https://muzammilloya.dev)
+// SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
+// Required Notice: keep this header in copies and derivatives (see LICENSE.md).
+
 import AppKit
 import ApplicationServices
 
@@ -60,12 +65,16 @@ final class MenuBarProbe: @unchecked Sendable {
 
         var extents = Extents()
         var minX: CGFloat?
-        if let frontPID {
-            let menus = itemFrames(of: frontPID, attribute: kAXMenuBarAttribute).filter(inStrip)
-            extents.menusMaxX = menus.filter { $0.minX < notchRect.minX }.map(\.maxX).max()
-            // Menus that don't fit left of the notch are moved to its right (e.g. Xcode's Help).
-            minX = menus.filter { $0.minX >= notchRect.maxX - 2 }.map(\.minX).min()
-        }
+        // Hit-test the bar just left of the notch: that finds the menus actually drawn there,
+        // whichever app owns them. (`frontmostApplication` is NotChi while its Settings window
+        // is up, and `menuBarOwningApplication` can report pid -1 on macOS 27.) The frontmost
+        // app's AXMenuBar is the fallback.
+        var menus = menuBarFrames(at: CGPoint(x: notchRect.minX - 8, y: stripTop + notchRect.height / 2))
+        if menus.isEmpty, let frontPID { menus = itemFrames(of: frontPID, attribute: kAXMenuBarAttribute) }
+        menus = menus.filter(inStrip)
+        extents.menusMaxX = menus.filter { $0.minX < notchRect.minX }.map(\.maxX).max()
+        // Menus that don't fit left of the notch are moved to its right (e.g. Xcode's Help).
+        minX = menus.filter { $0.minX >= notchRect.maxX - 2 }.map(\.minX).min()
 
         let full = Date().timeIntervalSince(lastFullSweep) > fullSweepInterval
         let candidates = full ? allPIDs : allPIDs.filter(pidsWithExtras.contains)
@@ -85,13 +94,41 @@ final class MenuBarProbe: @unchecked Sendable {
         return extents
     }
 
+    /// Menu title frames of the app menu bar under `point`. Also works for apps that don't
+    /// publish `AXMenuBar` on their application element (Xcode on macOS 27): the hit lands on
+    /// one of their menu titles, or on the bar itself, and the bar is the titles' parent.
+    private func menuBarFrames(at point: CGPoint) -> [CGRect] {
+        let system = AXUIElementCreateSystemWide()
+        AXUIElementSetMessagingTimeout(system, 0.1)
+        var hit: AXUIElement?
+        guard AXUIElementCopyElementAtPosition(system, Float(point.x), Float(point.y), &hit) == .success,
+              var element = hit else { return [] }
+        for _ in 0..<3 {
+            if role(of: element) == kAXMenuBarRole as String { return childFrames(of: element) }
+            var parent: CFTypeRef?
+            guard AXUIElementCopyAttributeValue(element, kAXParentAttribute as CFString, &parent) == .success,
+                  let parent, CFGetTypeID(parent) == AXUIElementGetTypeID() else { break }
+            element = parent as! AXUIElement
+        }
+        return []
+    }
+
+    private func role(of element: AXUIElement) -> String? {
+        var value: CFTypeRef?
+        AXUIElementCopyAttributeValue(element, kAXRoleAttribute as CFString, &value)
+        return value as? String
+    }
+
     private func itemFrames(of pid: pid_t, attribute: String) -> [CGRect] {
         let app = AXUIElementCreateApplication(pid)
         AXUIElementSetMessagingTimeout(app, 0.05)
         var barValue: CFTypeRef?
         guard AXUIElementCopyAttributeValue(app, attribute as CFString, &barValue) == .success,
               let barValue, CFGetTypeID(barValue) == AXUIElementGetTypeID() else { return [] }
-        let bar = barValue as! AXUIElement
+        return childFrames(of: barValue as! AXUIElement)
+    }
+
+    private func childFrames(of bar: AXUIElement) -> [CGRect] {
         var childrenValue: CFTypeRef?
         guard AXUIElementCopyAttributeValue(bar, kAXChildrenAttribute as CFString, &childrenValue) == .success,
               let children = childrenValue as? [AXUIElement] else { return [] }

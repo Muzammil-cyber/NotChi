@@ -1,3 +1,8 @@
+// NotChi — https://github.com/Muzammil-cyber/NotChi
+// Copyright (c) 2026 Muhammad Muzammil Loya (https://muzammilloya.dev)
+// SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
+// Required Notice: keep this header in copies and derivatives (see LICENSE.md).
+
 import ServiceManagement
 import SwiftUI
 
@@ -201,11 +206,155 @@ extension PhoneSettingsPane {
     }
 }
 
-struct PortsSettingsPane: View {
+struct NowPlayingSettingsPane: View {
     @Bindable private var settings = Settings.shared
 
     var body: some View {
         Form {
+            Section {
+                Toggle(isOn: $settings.nowPlayingEnabled) {
+                    Text("Show Now Playing")
+                    Text("The current track from Music, Spotify, browsers and other players, with playback controls, in the notch's Overview tab.")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+                .toggleStyle(.switch)
+                Toggle(isOn: $settings.nowPlayingInWings) {
+                    Text("Show artwork beside the notch while playing")
+                    Text("Replaces the system stats until playback pauses.")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+                .toggleStyle(.switch)
+                .disabled(!settings.nowPlayingEnabled)
+            }
+            Section("How it works") {
+                Text("Since macOS 15.4 apps can't read what's playing directly, so NotChi runs a small helper (mediaremote-adapter) through the system's Perl. It only reports changes, and it doesn't run while this is off.")
+                    .font(.callout).foregroundStyle(.secondary)
+                if !MediaRemoteBridge.isAvailable {
+                    Label("The helper is missing from this build.", systemImage: "exclamationmark.triangle")
+                        .foregroundStyle(.orange)
+                }
+            }
+        }
+        .settingsPaneStyle()
+    }
+}
+
+struct CalendarSettingsPane: View {
+    @Bindable private var settings = Settings.shared
+    private let model = CalendarModel.shared
+
+    var body: some View {
+        Form {
+            Section {
+                Toggle(isOn: $settings.calendarEnabled) {
+                    Text("Show Calendar")
+                    Text("Today's events in the notch's Overview tab, with a Join button for Zoom, Google Meet, Teams and Webex links.")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+                .toggleStyle(.switch)
+                Toggle(isOn: $settings.calendarInWings) {
+                    Text("Count down to events and reminders beside the notch")
+                    Text("From 5 minutes before each event or reminder with a time until a minute after it starts.")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+                .toggleStyle(.switch)
+                .disabled(!settings.calendarEnabled)
+                CalendarAccessRow()
+            }
+            Section("Reminders") {
+                Toggle(isOn: $settings.showReminders) {
+                    Text("Show reminders")
+                    Text("Reminders due today and overdue appear under the agenda. Click the circle to mark one completed.")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+                .toggleStyle(.switch)
+                .disabled(!settings.calendarEnabled)
+                RemindersAccessRow()
+            }
+            if model.access == .granted {
+                Section("Calendars") {
+                    ForEach(model.calendars(), id: \.calendarIdentifier) { calendar in
+                        Toggle(isOn: shown(calendar.calendarIdentifier)) {
+                            HStack(spacing: 6) {
+                                Circle().fill(Color(cgColor: calendar.cgColor)).frame(width: 8, height: 8)
+                                Text(calendar.title)
+                                Text(calendar.source.title).foregroundStyle(.secondary)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        .settingsPaneStyle()
+        .onAppear { model.reload() }
+    }
+
+    private func shown(_ id: String) -> Binding<Bool> {
+        Binding(
+            get: { !settings.hiddenCalendarIDs.contains(id) },
+            set: { show in
+                if show { settings.hiddenCalendarIDs.removeAll { $0 == id } } else { settings.hiddenCalendarIDs.append(id) }
+            })
+    }
+}
+
+/// Calendar access state with the button that fixes it.
+struct CalendarAccessRow: View {
+    private let model = CalendarModel.shared
+
+    var body: some View {
+        LabeledContent {
+            switch model.access {
+            case .granted:
+                Label("Granted", systemImage: "checkmark.circle.fill").foregroundStyle(.green)
+            case .notDetermined:
+                Button("Allow Access") { model.requestAccess() }
+            case .denied:
+                Button("Open System Settings") { model.openPrivacySettings() }
+            }
+        } label: {
+            Text("Calendar access")
+            Text("Read-only: NotChi shows events and finds meeting links. Nothing leaves your Mac.")
+                .font(.caption).foregroundStyle(.secondary)
+        }
+    }
+}
+
+/// Reminders access state with the button that fixes it.
+struct RemindersAccessRow: View {
+    private let model = CalendarModel.shared
+
+    var body: some View {
+        LabeledContent {
+            switch model.reminderAccess {
+            case .granted:
+                Label("Granted", systemImage: "checkmark.circle.fill").foregroundStyle(.green)
+            case .notDetermined:
+                Button("Allow Access") { model.requestReminderAccess() }
+            case .denied:
+                Button("Open System Settings") { model.openRemindersPrivacySettings() }
+            }
+        } label: {
+            Text("Reminders access")
+            Text("Shows reminders due today and lets you tick them off. Nothing leaves your Mac.")
+                .font(.caption).foregroundStyle(.secondary)
+        }
+    }
+}
+
+struct DevSettingsPane: View {
+    @Bindable private var settings = Settings.shared
+
+    var body: some View {
+        Form {
+            Section {
+                Toggle(isOn: $settings.devEnabled) {
+                    Text("Show Dev tab")
+                    Text("Developer utilities: Port Sniper (more coming). Off hides the tab; nothing runs.")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+                .toggleStyle(.switch)
+            }
             Section("Port Sniper") {
                 Toggle(isOn: $settings.portsShowAll) {
                     Text("Show all listening ports")
@@ -251,8 +400,12 @@ struct PermissionsSettingsPane: View {
                         .font(.caption).foregroundStyle(.secondary)
                 }
             }
+            Section("Calendar") {
+                CalendarAccessRow()
+                RemindersAccessRow()
+            }
             Section("Not required") {
-                Text("Hover detection, the global shortcut, clipboard history, system stats and port scanning need no permissions.")
+                Text("Hover detection, the global shortcut, clipboard history, system stats, Now Playing and port scanning need no permissions.")
                     .font(.callout).foregroundStyle(.secondary)
             }
         }
@@ -266,9 +419,11 @@ struct AboutSettingsPane: View {
         Form {
             Section {
                 HStack(spacing: 14) {
-                    Image(systemName: "rectangle.topthird.inset.filled")
-                        .font(.system(size: 34))
-                        .foregroundStyle(.tint)
+                    Image(nsImage: AppLogo.image)
+                        .resizable()
+                        .interpolation(.high)
+                        .frame(width: 64, height: 64)
+                        .accessibilityLabel("NotChi logo")
                     VStack(alignment: .leading, spacing: 2) {
                         Text("NotChi").font(.title2.weight(.semibold))
                         Text(AppVersion.displayString).foregroundStyle(.secondary).monospacedDigit()
@@ -279,11 +434,14 @@ struct AboutSettingsPane: View {
             Section {
                 LabeledContent("License", value: "PolyForm Noncommercial 1.0.0")
                 LabeledContent("Copyright", value: "© 2026 Muhammad Muzammil Loya")
+                LabeledContent("Source") {
+                    Link("github.com/Muzammil-cyber/NotChi", destination: URL(string: "https://github.com/Muzammil-cyber/NotChi")!)
+                }
                 LabeledContent("Commercial licensing") {
                     Link("muzammilloya.dev", destination: URL(string: "https://muzammilloya.dev")!)
                 }
                 LabeledContent("Third-party components") {
-                    Text("NearDrop · Google Nearby · SwiftProtobuf").foregroundStyle(.secondary)
+                    Text("NearDrop · Google Nearby · SwiftProtobuf · mediaremote-adapter").foregroundStyle(.secondary)
                 }
                 LabeledContent("Data") {
                     Button("Show in Finder") { NSWorkspace.shared.open(AppPaths.support) }

@@ -8,13 +8,15 @@ Hover over the notch, or press **⌥⌘N**, to open it.
 
 | Module | What it does |
 | --- | --- |
+| **Overview** | **Now Playing** and **Calendar** side by side. |
+| ↳ Now Playing | The current track from Music, Spotify, browsers and other players, with artwork, play/pause/skip and a scrub bar. While music plays, the artwork and an equalizer sit beside the notch. |
+| ↳ Calendar | Today's date, what's on now or next with a **Join** button for Zoom, Google Meet, Teams and Webex links, the rest of the day, and reminders due today, which you tick off with one click. A countdown appears beside the notch from 5 minutes before any event or timed reminder, and clears a minute after it starts. |
 | **Clipboard** | Automatic history of text, rich text, code, links, images and files. Includes search and type filters. Click an item to paste it into the app you're using. |
 | **Stash** | A permanent drop zone at the top of the panel. Drag files, images or text in, pin what you want to keep, and drag items back out anywhere. |
-| **Ports** | Lists the local dev servers that are listening, with a live health check and latency for each. One click kills a stuck process. |
-| **Stats** | CPU, memory pressure and network up/down next to the notch, with sparklines in the panel. |
+| **Dev** | Developer utilities. Optional: turn it off in Settings → Dev if you don't code. |
+| ↳ Port Sniper | Lists the local dev servers that are listening, with a live health check and latency for each. One click kills a stuck process. |
+| **Stats** | CPU, memory pressure and network up/down beside the notch while collapsed, and next to the settings button while open. |
 | **Phone transfer** | Send and receive files with your iPhone (AirDrop) or Android phone (Quick Share). Choose your phone in Settings → Phone. |
-
-On the roadmap: a Now Playing controller and a calendar agenda with one-click meeting joins.
 
 ## Installation
 
@@ -74,7 +76,7 @@ If auto-paste stops working after an update, the Accessibility switch may be on 
 | ⌥⌘N does nothing | Another app may use that shortcut. Pick a different one in **Settings → General**. |
 | Clicking an item copies but doesn't paste | Grant Accessibility (see above). If it already looks granted, remove NotChi from the list and add it again. |
 | Stats next to the notch disappeared | That's intentional: a side hides when your app's menus or menu bar icons need the space. You can turn the stats off in **Settings → General**. |
-| A Docker/OrbStack container is missing from Ports | Make sure Docker/OrbStack is running and the container publishes a port (`-p 8080:80`). |
+| A Docker/OrbStack container is missing from Port Sniper | Make sure Docker/OrbStack is running and the container publishes a port (`-p 8080:80`). |
 
 ### Uninstall
 
@@ -102,7 +104,7 @@ Pick your phone in **Settings → Phone** (iPhone, Android, Both or None). Only 
 
 Received files go to **Downloads** by default; pick another folder in Settings → Phone. AirDrop always saves to Downloads, so NotChi moves AirDrop arrivals into your folder.
 
-Quick Share support is adapted from [NearDrop](https://github.com/grishka/NearDrop) by Grishka (public domain).
+Quick Share support is adapted from [NearDrop](https://github.com/grishka/NearDrop) by Grishka (public domain). Now Playing uses [mediaremote-adapter](https://github.com/ungive/mediaremote-adapter) by Jonas van den Berg (BSD 3-Clause).
 
 ## Permissions
 
@@ -112,7 +114,9 @@ Quick Share support is adapted from [NearDrop](https://github.com/grishka/NearDr
 | Local Network | Quick Share with Android phones (only when Android is selected). |
 | Downloads folder | Saving received files and noticing AirDrop arrivals (only when a phone is selected). |
 | Notifications | Incoming share requests (PIN, Accept / Decline) and finished transfers. Optional. |
-| None | Hover detection, the global shortcut (a Carbon hotkey), clipboard polling, system stats, port scanning (libproc, current user's processes). |
+| Calendars | The Calendar agenda and meeting countdown. Read-only; asked only when you click **Allow Access**. |
+| Reminders | Reminders due today in the Calendar pane. Used only to show them and mark them completed. |
+| None | Hover detection, the global shortcut (a Carbon hotkey), clipboard polling, system stats, Now Playing, port scanning (libproc, current user's processes). |
 
 NotChi skips clipboard items that password managers mark as concealed or transient. You can also exclude apps by bundle ID in Settings. All data stays local in `~/Library/Application Support/NotChi`.
 
@@ -124,6 +128,8 @@ Requires Xcode 15 or later on macOS 14 or later.
 swift build                  # debug build
 swift run                    # run directly (no .app bundle)
 scripts/build-app.sh         # universal build/NotChi.app + build/NotChi.dmg
+scripts/build-mediaremote-adapter.sh  # Now Playing helper, needed once for `swift run`
+scripts/check-headers.sh     # every Swift source carries the license header (CI runs it)
 ```
 
 Open `Package.swift` in Xcode to develop with the full IDE.
@@ -140,10 +146,17 @@ Scripts, Raycast, or Shortcuts can drive NotChi with distributed notifications:
 
 | Notification | Object |
 | --- | --- |
-| `com.notchi.app.open` | optional tab: `clipboard`, `ports`, `stats` |
+| `com.notchi.app.open` | optional tab: `overview`, `clipboard`, `dev` (`nowplaying` and `calendar` open Overview, `ports` opens Dev) |
 | `com.notchi.app.close` | — |
-| `com.notchi.app.settings` | optional pane: `general`, `clipboard`, `phone`, `ports`, `permissions`, `about` |
+| `com.notchi.app.settings` | optional pane: `general`, `clipboard`, `media`, `calendar`, `phone`, `dev`, `permissions`, `about` |
 | `com.notchi.app.send` | `iphone:/path/to/file` or `android:/path/to/file` (needs that phone enabled in Settings) |
+| `com.notchi.app.media` | `toggle`, `next` or `previous` |
+
+From a shell:
+
+```sh
+swift -e 'import Foundation; DistributedNotificationCenter.default().postNotificationName(.init("com.notchi.app.open"), object: "calendar", deliverImmediately: true)'
+```
 
 ## Architecture
 
@@ -153,10 +166,14 @@ Sources/NotChi/
   Notch/      NotchPanel (non-activating overlay), NotchController (hover/hotkey/collapse),
               NotchGeometry (notch detection), HotKey (Carbon), ModuleHost
   UI/         NotchRootView, NotchShape, tab bar, settings
-  Modules/    one folder per feature, each implementing the NotchModule protocol
+  Modules/    one folder per feature, each implementing the NotchModule protocol;
+              Overview shows Now Playing and Calendar side by side
+Vendor/       mediaremote-adapter (BSD-3), built by scripts/build-mediaremote-adapter.sh
 ```
 
-To add a feature, implement `NotchModule` (see `Modules/Module.swift`) and register it in `AppDelegate`.
+To add a feature, implement `NotchModule` (see `Modules/Module.swift`) and register it in `AppDelegate`, either as a tab or as an Overview pane.
+
+**Now Playing on macOS 15.4+:** apps can no longer read MediaRemote directly. NotChi bundles [mediaremote-adapter](https://github.com/ungive/mediaremote-adapter), which runs under the system's `/usr/bin/perl` and streams changes as JSON lines. `scripts/build-app.sh` builds it automatically; for `swift run`, run `scripts/build-mediaremote-adapter.sh` once.
 
 ## Releasing
 
@@ -171,3 +188,18 @@ NotChi is source-available under the [PolyForm Noncommercial License 1.0.0](LICE
 Any commercial use needs a separate commercial license — selling it or a fork, bundling it in a paid product or service, or otherwise making money from it. To arrange one, get in touch via [muzammilloya.dev](https://muzammilloya.dev).
 
 NotChi includes third-party components under their own licenses; see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+
+### Reusing NotChi code
+
+You're welcome to learn from the code and reuse it noncommercially, as long as credit comes with it. The license's Required Notice must be kept:
+
+- Keep the header at the top of any file you copy:
+  ```swift
+  // NotChi — https://github.com/Muzammil-cyber/NotChi
+  // Copyright (c) 2026 Muhammad Muzammil Loya (https://muzammilloya.dev)
+  // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
+  ```
+- For a snippet or adapted code, add: `Adapted from NotChi by Muhammad Muzammil Loya — https://github.com/Muzammil-cyber/NotChi`.
+- The same applies to code an AI assistant produces from this repository.
+
+Citation metadata is in [CITATION.cff](CITATION.cff) (GitHub's **Cite this repository** button), and [llms.txt](llms.txt) summarizes the project for AI tools.

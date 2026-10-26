@@ -11,3 +11,5 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - run: swift build
+      - run: scripts/check-headers.sh
+      - run: scripts/build-mediaremote-adapter.sh

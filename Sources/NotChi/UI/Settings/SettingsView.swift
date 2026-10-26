@@ -1,8 +1,13 @@
+// NotChi — https://github.com/Muzammil-cyber/NotChi
+// Copyright (c) 2026 Muhammad Muzammil Loya (https://muzammilloya.dev)
+// SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
+// Required Notice: keep this header in copies and derivatives (see LICENSE.md).
+
 import AppKit
 import SwiftUI
 
 enum SettingsTab: String, CaseIterable, Identifiable {
-    case general, clipboard, phone, ports, permissions, about
+    case general, clipboard, media, calendar, phone, dev, permissions, about
 
     var id: Self { self }
 
@@ -10,19 +15,28 @@ enum SettingsTab: String, CaseIterable, Identifiable {
         switch self {
         case .general: "General"
         case .clipboard: "Clipboard"
+        case .media: "Now Playing"
+        case .calendar: "Calendar"
         case .phone: "Phone"
-        case .ports: "Ports"
+        case .dev: "Dev"
         case .permissions: "Permissions"
         case .about: "About"
         }
+    }
+
+    /// Settings pane from an automation id; "ports" still opens Dev for older scripts.
+    init?(automationID id: String) {
+        self.init(rawValue: id == "ports" ? "dev" : id)
     }
 
     var systemImage: String {
         switch self {
         case .general: "gearshape"
         case .clipboard: "doc.on.clipboard"
+        case .media: "music.note"
+        case .calendar: "calendar"
         case .phone: "iphone.gen3"
-        case .ports: "network"
+        case .dev: "hammer"
         case .permissions: "hand.raised"
         case .about: "info.circle"
         }
@@ -36,6 +50,18 @@ final class SettingsNavigation {
     static let shared = SettingsNavigation()
     var selectedTab: SettingsTab? = .general
     private init() {}
+}
+
+/// The app icon for the About pane. A `swift run` build has no bundle icon, so it falls
+/// back to the repo's AppIcon.icns.
+enum AppLogo {
+    static let image: NSImage = {
+        if Bundle.main.bundleURL.pathExtension == "app" { return NSApp.applicationIconImage }
+        let repo = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent().deletingLastPathComponent()
+            .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+        return NSImage(contentsOf: repo.appendingPathComponent("Resources/AppIcon.icns")) ?? NSApp.applicationIconImage
+    }()
 }
 
 enum AppVersion {
@@ -96,8 +122,10 @@ struct SettingsView: View {
         switch activeTab {
         case .general: GeneralSettingsPane()
         case .clipboard: ClipboardSettingsPane()
+        case .media: NowPlayingSettingsPane()
+        case .calendar: CalendarSettingsPane()
         case .phone: PhoneSettingsPane()
-        case .ports: PortsSettingsPane()
+        case .dev: DevSettingsPane()
         case .permissions: PermissionsSettingsPane()
         case .about: AboutSettingsPane()
         }

@@ -1,3 +1,8 @@
+// NotChi — https://github.com/Muzammil-cyber/NotChi
+// Copyright (c) 2026 Muhammad Muzammil Loya (https://muzammilloya.dev)
+// SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
+// Required Notice: keep this header in copies and derivatives (see LICENSE.md).
+
 import AppKit
 import SwiftUI
 
@@ -62,6 +67,7 @@ final class NotchController {
 
         registerHotKey()
         observeHotKeySetting()
+        observeEnabledTabs()
         startMenuBarProbe()
     }
 
@@ -81,7 +87,7 @@ final class NotchController {
         pointerVisitedSinceSticky = false
         exitStart = nil
         guard !state.isExpanded else { return }
-        if state.selectedModuleID.isEmpty { state.selectedModuleID = host.modules.first?.id ?? "" }
+        ensureEnabledSelection()
         panel.ignoresMouseEvents = false
         state.isExpanded = true
         host.visibilityChanged(expanded: true, selected: state.selectedModuleID)
@@ -103,10 +109,33 @@ final class NotchController {
         }
     }
 
+    /// Keeps the selection on a tab that's shown; falls back to the first one when the
+    /// selected tab (e.g. Dev) was turned off in Settings.
+    private func ensureEnabledSelection() {
+        let enabled = host.enabledTabs
+        guard !enabled.contains(where: { $0.id == state.selectedModuleID }),
+              let first = enabled.first?.id else { return }
+        state.selectedModuleID = first
+        host.visibilityChanged(expanded: state.isExpanded, selected: first)
+    }
+
+    private func observeEnabledTabs() {
+        withObservationTracking {
+            _ = host.enabledTabs.map(\.id)
+        } onChange: { [weak self] in
+            Task { @MainActor in
+                self?.ensureEnabledSelection()
+                self?.observeEnabledTabs()
+            }
+        }
+    }
+
+    /// Selects a tab; an Overview pane's id ("nowplaying", "calendar") selects Overview.
     func select(moduleID: String) {
-        guard moduleID != state.selectedModuleID else { return }
-        state.selectedModuleID = moduleID
-        host.visibilityChanged(expanded: state.isExpanded, selected: moduleID)
+        guard let tab = host.tabID(for: moduleID), tab != state.selectedModuleID else { return }
+        // Animated here so every switch (click, shortcut, automation) slides the tab pill.
+        withAnimation(.spring(duration: 0.35, bounce: 0.2)) { state.selectedModuleID = tab }
+        host.visibilityChanged(expanded: state.isExpanded, selected: tab)
     }
 
     /// Lets a text field inside the panel receive typing.
@@ -213,6 +242,11 @@ final class NotchController {
         let workspace = NSWorkspace.shared.notificationCenter
         workspace.addObserver(forName: NSWorkspace.didActivateApplicationNotification, object: nil, queue: .main) { [weak self] _ in
             MainActor.assumeIsolated { self?.updateWings() }
+            // The menu bar switches to the new app's menus a moment after activation; measure
+            // again once it has, or the wings could cover them until the 30 s re-check.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+                MainActor.assumeIsolated { self?.updateWings() }
+            }
         }
         for name in [NSWorkspace.didLaunchApplicationNotification, NSWorkspace.didTerminateApplicationNotification] {
             workspace.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in
@@ -239,7 +273,7 @@ final class NotchController {
     }
 
     private func updateWings() {
-        guard settings.showWings, host.hasWings else {
+        guard settings.wingsWanted, host.hasWings else {
             setWings(left: 0, right: 0)
             return
         }
@@ -247,7 +281,7 @@ final class NotchController {
         let notch = state.geometry.notchRect
         let primaryMaxY = NSScreen.screens.first?.frame.maxY ?? state.geometry.screenFrame.maxY
         menuBarProbe.measure(notchRect: notch, primaryMaxY: primaryMaxY) { [weak self] extents in
-            guard let self, settings.showWings else { return }
+            guard let self, settings.wingsWanted else { return }
             let left = host.leftWing == nil ? 0
                 : NotchGeometry.wingWidth(available: extents.menusMaxX.map { notch.minX - $0 })
             let right = host.rightWing == nil ? 0
@@ -263,7 +297,9 @@ final class NotchController {
 
     private func observeWingSetting() {
         withObservationTracking {
-            _ = settings.showWings
+            _ = settings.wingsWanted
+            // Without Accessibility the menus can't be measured; re-measure once it's granted.
+            _ = AccessibilityStatus.shared.isTrusted
         } onChange: { [weak self] in
             Task { @MainActor in
                 self?.updateWings()

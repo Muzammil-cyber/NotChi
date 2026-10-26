@@ -1,6 +1,6 @@
 # Third-Party Notices
 
-NotChi is licensed under the PolyForm Noncommercial License 1.0.0 (see `LICENSE`).
+NotChi is licensed under the PolyForm Noncommercial License 1.0.0 (see `LICENSE.md`).
 It includes the third-party components below. Each stays under its original license,
 and nothing in NotChi's license limits your rights to use these components on their own
 under those terms.
@@ -9,6 +9,7 @@ under those terms.
 | --- | --- | --- |
 | [NearDrop](https://github.com/grishka/NearDrop) | Quick Share protocol engine (adapted) — `Sources/NotChi/Modules/Transfer/QuickShare/` | Unlicense (public domain) |
 | [Google Nearby](https://github.com/google/nearby) | Protocol buffer definitions the generated `Protobuf/*.pb.swift` files are built from | Apache License 2.0 |
+| [mediaremote-adapter](https://github.com/ungive/mediaremote-adapter) | Now Playing helper framework and Perl script — `Vendor/mediaremote-adapter/`, bundled in the app's Resources | BSD 3-Clause |
 | [SwiftProtobuf](https://github.com/apple/swift-protobuf) | Protocol buffer runtime library, compiled into the app | Apache License 2.0 with Runtime Library Exception |
 
 ---
@@ -72,6 +73,45 @@ As an exception, if you use this Software to compile your source code and
 portions of this Software are embedded into the binary product as a result,
 you may redistribute such product without providing attribution as would
 otherwise be required by Sections 4(a), 4(b) and 4(d) of the License.
+```
+
+---
+
+## mediaremote-adapter
+
+Copyright (c) 2025, Jonas van den Berg and contributors (`src/test/NowPlayingTest.h`: Copyright (c) 2025 Alexander5015).
+Vendored unmodified from https://github.com/ungive/mediaremote-adapter (see `Vendor/mediaremote-adapter/VENDORED.md`
+for the commit) and built into `MediaRemoteAdapter.framework` by `scripts/build-mediaremote-adapter.sh`.
+
+```
+BSD 3-Clause License
+
+Copyright (c) 2025, Jonas van den Berg and contributors
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+
+1. Redistributions of source code must retain the above copyright notice, this
+   list of conditions and the following disclaimer.
+
+2. Redistributions in binary form must reproduce the above copyright notice,
+   this list of conditions and the following disclaimer in the documentation
+   and/or other materials provided with the distribution.
+
+3. Neither the name of the copyright holder nor the names of its
+   contributors may be used to endorse or promote products derived from
+   this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ```
 
 ---

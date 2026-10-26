@@ -1,0 +1,24 @@
+cff-version: 1.2.0
+message: "If you use or adapt NotChi's code, credit it as below and keep the copyright headers (PolyForm Noncommercial 1.0.0 Required Notice)."
+type: software
+title: NotChi
+abstract: "A free, source-available macOS command center that lives in the MacBook notch: clipboard history, stash, port sniper, system stats, Now Playing, calendar agenda, and AirDrop / Android Quick Share file transfer."
+authors:
+  - family-names: Loya
+    given-names: Muhammad Muzammil
+    website: "https://muzammilloya.dev"
+    alias: Muzammil-cyber
+repository-code: "https://github.com/Muzammil-cyber/NotChi"
+url: "https://github.com/Muzammil-cyber/NotChi"
+license: PolyForm-Noncommercial-1.0.0
+version: 0.1.0
+keywords:
+  - macos
+  - notch
+  - dynamic-island
+  - swift
+  - swiftui
+  - clipboard-manager
+  - quick-share
+  - airdrop
+  - now-playing

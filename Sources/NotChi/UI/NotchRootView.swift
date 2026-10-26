@@ -1,3 +1,8 @@
+// NotChi — https://github.com/Muzammil-cyber/NotChi
+// Copyright (c) 2026 Muhammad Muzammil Loya (https://muzammilloya.dev)
+// SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
+// Required Notice: keep this header in copies and derivatives (see LICENSE.md).
+
 import SwiftUI
 
 struct NotchRootView: View {
@@ -6,11 +11,25 @@ struct NotchRootView: View {
     let host: ModuleHost
 
     private var transferActive: Bool { host.transfer?.isActive ?? false }
+    /// A module (Now Playing, an upcoming meeting) using the wings instead of the stats.
+    private var claimant: NotchModule? { transferActive ? nil : host.wingClaimant }
 
-    /// A running transfer always gets some room beside the notch, even where the stats
-    /// wings have stepped aside for menus; it's brief and the user is waiting on it.
-    private var leftWidth: CGFloat { transferActive ? max(state.leftWingWidth, 56) : state.leftWingWidth }
-    private var rightWidth: CGFloat { transferActive ? max(state.rightWingWidth, 56) : state.rightWingWidth }
+    /// A running transfer or an imminent meeting always gets some room beside the notch,
+    /// even where the stats wings have stepped aside for menus; both are brief.
+    private var needsRoom: Bool { transferActive || claimant?.wingNeedsRoom == true }
+    /// Stats wings only show when turned on; a claimant can show even when they're off.
+    private var wingsAllowed: Bool { needsRoom || claimant != nil || settings.showWings }
+    private var leftWidth: CGFloat { width(state.leftWingWidth) }
+    private var rightWidth: CGFloat { width(state.rightWingWidth) }
+
+    private func width(_ measured: CGFloat) -> CGFloat {
+        guard wingsAllowed else { return 0 }
+        let width = needsRoom ? max(measured, 56) : measured
+        // A claimant with compact content hugs the notch, but never takes more than the
+        // menus leave free.
+        if let preferred = claimant?.claimedWingWidth, width > 0 { return min(width, preferred) }
+        return width
+    }
 
     private var wingsVisible: Bool { leftWidth > 0 || rightWidth > 0 }
 
@@ -57,7 +76,7 @@ struct NotchRootView: View {
             if !expanded && wingsVisible {
                 // Always laid out at the final collapsed size; only opacity animates.
                 CollapsedWings(host: host, state: state, left: leftWidth, right: rightWidth,
-                               transferActive: transferActive)
+                               transferActive: transferActive, claimant: claimant)
                     .frame(width: collapsedSize.width, height: collapsedSize.height)
                     .offset(x: shapeOffset)
                     .transition(.opacity)
@@ -77,6 +96,7 @@ private struct CollapsedWings: View {
     let left: CGFloat
     let right: CGFloat
     let transferActive: Bool
+    let claimant: NotchModule?
 
     var body: some View {
         let height = state.geometry.collapsedHeight(withWings: true)
@@ -91,6 +111,9 @@ private struct CollapsedWings: View {
     @ViewBuilder private func wing(_ side: TransferWing.Side) -> some View {
         if transferActive, let transfer = host.transfer {
             TransferWing(coordinator: transfer, side: side)
+        } else if let claimant {
+            let wings = host.wings(of: claimant)
+            side == .left ? wings.left : wings.right
         } else {
             (side == .left ? host.leftWing : host.rightWing) ?? AnyView(Color.clear)
         }
@@ -106,24 +129,31 @@ private struct ExpandedContent: View {
             // Header row shares the strip beside the hardware notch.
             HStack(spacing: 0) {
                 // The header shares the strip beside the hardware notch, so the tabs must fit
-                // in the space left of it; fall back to icons-only tabs when they don't.
+                // in the space left of it; fall back to icons only when they don't.
                 ViewThatFits(in: .horizontal) {
-                    tabBar(compact: false)
-                    tabBar(compact: true)
+                    tabBar(host.enabledTabs, selected: state.selectedModuleID, titles: true)
+                    tabBar(host.enabledTabs, selected: state.selectedModuleID, titles: false)
                 }
                 .frame(width: sideWidth, alignment: .leading)
                 Spacer(minLength: state.geometry.notchSize.width)
                 HStack(spacing: 10) {
-                    Button { AppDelegate.shared?.showSettings() } label: {
-                        Image(systemName: "gearshape")
+                    if let readouts = host.headerAccessory {
+                        readouts
                     }
-                    Button { NotchController.shared.collapse() } label: {
-                        Image(systemName: "chevron.up")
+                    HStack(spacing: 10) {
+                        Button { AppDelegate.shared?.showSettings() } label: {
+                            Image(systemName: "gearshape")
+                        }
+                        Button { NotchController.shared.collapse() } label: {
+                            Image(systemName: "chevron.up")
+                        }
                     }
+                    .buttonStyle(.plain)
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(.white.opacity(0.6))
+                    .fixedSize()
                 }
-                .buttonStyle(.plain)
-                .font(.system(size: 12, weight: .medium))
-                .foregroundStyle(.white.opacity(0.6))
+                .frame(width: sideWidth, alignment: .trailing)
             }
             .frame(height: max(state.geometry.notchSize.height, 26))
 
@@ -137,6 +167,8 @@ private struct ExpandedContent: View {
             }
 
             host.expandedView(for: state.selectedModuleID)
+                .id(state.selectedModuleID)
+                .transition(.opacity)
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                 .mask(BottomFade())
         }
@@ -152,8 +184,8 @@ private struct ExpandedContent: View {
         return max(0, (usable - state.geometry.notchSize.width) / 2 - 8)
     }
 
-    private func tabBar(compact: Bool) -> some View {
-        ModuleTabBar(modules: host.modules, selectedID: state.selectedModuleID, compact: compact) { id in
+    private func tabBar(_ modules: [NotchModule], selected: String, titles: Bool) -> some View {
+        ModuleTabBar(modules: modules, selectedID: selected, showsSelectedTitle: titles) { id in
             NotchController.shared.select(moduleID: id)
         }
         .fixedSize()

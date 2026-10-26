@@ -1,3 +1,8 @@
+// NotChi — https://github.com/Muzammil-cyber/NotChi
+// Copyright (c) 2026 Muhammad Muzammil Loya (https://muzammilloya.dev)
+// SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
+// Required Notice: keep this header in copies and derivatives (see LICENSE.md).
+
 import SwiftUI
 
 // MARK: - Formatting
@@ -16,20 +21,6 @@ enum StatsFormat {
 
     private static func shortUnit(_ x: Double, _ unit: String) -> String {
         x >= 10 ? "\(Int(x.rounded()))\(unit)" : String(format: "%.1f%@", x, unit)
-    }
-
-    /// Longer rate for cards: "1.24 MB/s".
-    static func longRate(_ bytesPerSecond: Double) -> String {
-        let v = max(0, bytesPerSecond)
-        if v < 1000 { return "\(Int(v)) B/s" }
-        if v < 1e6 { return String(format: "%.0f KB/s", v / 1e3) }
-        if v < 1e9 { return String(format: "%.2f MB/s", v / 1e6) }
-        return String(format: "%.2f GB/s", v / 1e9)
-    }
-
-    static func gigabytes(_ bytes: UInt64) -> String {
-        let gb = Double(bytes) / 1_073_741_824
-        return gb >= 10 ? String(format: "%.0f", gb) : String(format: "%.1f", gb)
     }
 
     static func percent(_ fraction: Double) -> String { "\(Int((fraction * 100).rounded()))%" }
@@ -119,173 +110,52 @@ private struct ProgressBar: View {
     }
 }
 
-// MARK: - Expanded view
+// MARK: - Header
 
-/// Three side-by-side cards: CPU, Memory, Network.
-struct StatsExpandedView: View {
+/// Compact readouts in the expanded panel's header, beside the settings button.
+struct StatsHeaderView: View {
     let model: StatsModel
 
     var body: some View {
-        HStack(spacing: 12) {
-            StatCard(
-                title: "CPU",
-                value: StatsFormat.percent(model.cpu),
-                subtitle: "Total usage",
-                series: [.init(values: model.cpuHistory, color: .cyan)],
-                fixedMax: 1
-            )
-            StatCard(
-                title: "Memory",
-                value: StatsFormat.percent(model.memFraction),
-                subtitle: "\(StatsFormat.gigabytes(model.memUsed)) / \(StatsFormat.gigabytes(model.memTotal)) GB · \(model.pressure.label) pressure",
-                accent: model.pressure.color,
-                series: [.init(values: model.memHistory, color: model.pressure.color)],
-                fixedMax: 1
-            )
-            StatCard(
-                title: "Network",
-                value: nil,
-                subtitle: nil,
-                series: [
-                    .init(values: model.downHistory, color: .green),
-                    .init(values: model.upHistory, color: .orange),
-                ],
-                fixedMax: nil
-            ) {
-                VStack(alignment: .leading, spacing: 2) {
-                    rateLine("arrow.down", model.downRate, .green)
-                    rateLine("arrow.up", model.upRate, .orange)
-                }
+        ViewThatFits(in: .horizontal) {
+            readouts(labels: true)
+            readouts(labels: false)
+        }
+        .font(.system(size: 10, weight: .medium, design: .monospaced))
+        .monospacedDigit()
+        .foregroundStyle(.white.opacity(0.75))
+        .lineLimit(1)
+        .accessibilityElement(children: .combine)
+    }
+
+    private func readouts(labels: Bool) -> some View {
+        HStack(spacing: 8) {
+            item(labels ? "CPU" : nil, StatsFormat.percent(model.cpu))
+                .help("CPU usage")
+            HStack(spacing: 3) {
+                Circle().fill(model.pressure.color).frame(width: 5, height: 5)
+                item(labels ? "RAM" : nil, StatsFormat.percent(model.memFraction))
             }
-        }
-        .padding(12)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-    }
-
-    private func rateLine(_ symbol: String, _ rate: Double, _ color: Color) -> some View {
-        HStack(spacing: 5) {
-            Image(systemName: symbol).font(.system(size: 11, weight: .bold)).foregroundStyle(color)
-            Text(StatsFormat.longRate(rate))
-                .font(.system(size: 17, weight: .semibold, design: .rounded))
-                .monospacedDigit()
-                .foregroundStyle(.white)
-                .lineLimit(1)
-                .minimumScaleFactor(0.6)
-        }
-    }
-}
-
-private struct StatSeries {
-    var values: [Double]
-    var color: Color
-}
-
-private struct StatCard<Header: View>: View {
-    let title: String
-    let value: String?
-    let subtitle: String?
-    var accent: Color? = nil
-    let series: [StatSeries]
-    let fixedMax: Double?
-    @ViewBuilder var header: () -> Header
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack(spacing: 5) {
-                if let accent { Circle().fill(accent).frame(width: 6, height: 6) }
-                Text(title.uppercased())
-                    .font(.system(size: 10, weight: .semibold))
-                    .tracking(0.6)
-                    .foregroundStyle(.white.opacity(0.5))
+            .help("Memory used · \(model.pressure.label) pressure")
+            HStack(spacing: 2) {
+                Text("↓").foregroundStyle(.green)
+                Text(StatsFormat.rate(model.downRate))
+                Text("↑").foregroundStyle(.orange).padding(.leading, 3)
+                Text(StatsFormat.rate(model.upRate))
             }
-            if let value {
-                Text(value)
-                    .font(.system(size: 30, weight: .semibold, design: .rounded))
-                    .monospacedDigit()
-                    .foregroundStyle(.white)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.6)
+            .help("Network download and upload per second")
+        }
+        .fixedSize()
+    }
+
+    private func item(_ label: String?, _ value: String) -> some View {
+        HStack(spacing: 3) {
+            if let label {
+                Text(label)
+                    .font(.system(size: 8, weight: .semibold))
+                    .foregroundStyle(.white.opacity(0.45))
             }
-            header()
-            if let subtitle {
-                Text(subtitle)
-                    .font(.system(size: 10))
-                    .foregroundStyle(.white.opacity(0.55))
-                    .lineLimit(2)
-                    .minimumScaleFactor(0.8)
-            }
-            Spacer(minLength: 0)
-            Sparkline(series: series, fixedMax: fixedMax)
-                .frame(height: 48)
-                .drawingGroup() // rasterize the gradient paths on the GPU each tick
+            Text(value)
         }
-        .padding(12)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(.white.opacity(0.06)))
-    }
-}
-
-extension StatCard where Header == EmptyView {
-    fileprivate init(title: String, value: String?, subtitle: String?, accent: Color? = nil,
-                     series: [StatSeries], fixedMax: Double?) {
-        self.init(title: title, value: value, subtitle: subtitle, accent: accent,
-                  series: series, fixedMax: fixedMax) { EmptyView() }
-    }
-}
-
-// MARK: - Sparkline
-
-/// Smooth line chart(s) over a fixed 60-sample window, with a gradient fill under each line.
-private struct Sparkline: View {
-    let series: [StatSeries]
-    let fixedMax: Double?
-
-    private var maxValue: Double {
-        if let fixedMax { return fixedMax }
-        let peak = series.flatMap(\.values).max() ?? 0
-        return max(peak * 1.15, 1024) // floor avoids amplifying idle noise
-    }
-
-    var body: some View {
-        ZStack {
-            ForEach(series.indices, id: \.self) { i in
-                let s = series[i]
-                SparkShape(values: s.values, maxValue: maxValue, closed: true)
-                    .fill(LinearGradient(colors: [s.color.opacity(0.35), s.color.opacity(0)],
-                                         startPoint: .top, endPoint: .bottom))
-                SparkShape(values: s.values, maxValue: maxValue, closed: false)
-                    .stroke(s.color, style: StrokeStyle(lineWidth: 1.5, lineCap: .round, lineJoin: .round))
-            }
-        }
-    }
-}
-
-private struct SparkShape: Shape {
-    let values: [Double]
-    let maxValue: Double
-    let closed: Bool
-
-    func path(in rect: CGRect) -> Path {
-        var path = Path()
-        guard values.count > 1, maxValue > 0 else { return path }
-        // Spread the samples across the full width until the history fills up, then scroll.
-        let step = rect.width / CGFloat(values.count - 1)
-        let startX: CGFloat = 0
-        let points = values.enumerated().map { i, v in
-            CGPoint(x: startX + step * CGFloat(i),
-                    y: rect.height - rect.height * CGFloat(min(1, max(0, v / maxValue))))
-        }
-        path.move(to: points[0])
-        for i in 1..<points.count {
-            let p0 = points[i - 1], p1 = points[i]
-            let midX = (p0.x + p1.x) / 2
-            path.addCurve(to: p1, control1: CGPoint(x: midX, y: p0.y), control2: CGPoint(x: midX, y: p1.y))
-        }
-        if closed {
-            path.addLine(to: CGPoint(x: points.last!.x, y: rect.height))
-            path.addLine(to: CGPoint(x: points[0].x, y: rect.height))
-            path.closeSubpath()
-        }
-        return path
     }
 }

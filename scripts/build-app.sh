@@ -1,4 +1,9 @@
 #!/usr/bin/env bash
+# NotChi — https://github.com/Muzammil-cyber/NotChi
+# Copyright (c) 2026 Muhammad Muzammil Loya (https://muzammilloya.dev)
+# SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
+# Required Notice: keep this header in copies and derivatives (see LICENSE.md).
+#
 # Builds NotChi.app (universal) and NotChi.dmg into ./build.
 #
 #   scripts/build-app.sh             # signs with your "Apple Development" identity if present
@@ -25,6 +30,8 @@ echo "==> Building release binary"
 swift build -c release --arch arm64 --arch x86_64
 BIN="$(swift build -c release --arch arm64 --arch x86_64 --show-bin-path)/NotChi"
 
+scripts/build-mediaremote-adapter.sh
+
 echo "==> Assembling $APP"
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
@@ -33,13 +40,18 @@ cp Resources/Info.plist "$APP/Contents/Info.plist"
 # License and third-party notices travel with the app (Apache 2.0 requires the latter).
 cp LICENSE.md THIRD_PARTY_NOTICES.md "$APP/Contents/Resources/"
 /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $VERSION" "$APP/Contents/Info.plist"
+# Now Playing helper: run by /usr/bin/perl, never linked (see MediaRemoteBridge.swift).
+cp -R "$OUT/MediaRemoteAdapter.framework" "$APP/Contents/Resources/"
+cp "$OUT/mediaremote-adapter.pl" "$APP/Contents/Resources/"
 if [[ -f Resources/AppIcon.icns ]]; then
   cp Resources/AppIcon.icns "$APP/Contents/Resources/"
   /usr/libexec/PlistBuddy -c "Add :CFBundleIconFile string AppIcon" "$APP/Contents/Info.plist" 2>/dev/null || true
 fi
 
 echo "==> Signing (identity: $SIGN_ID)"
-codesign --force --deep --options runtime --sign "$SIGN_ID" "$APP"
+codesign --force --sign "$SIGN_ID" "$APP/Contents/Resources/MediaRemoteAdapter.framework"
+# The hardened runtime blocks EventKit unless the calendars entitlement is present.
+codesign --force --options runtime --entitlements Resources/NotChi.entitlements --sign "$SIGN_ID" "$APP"
 codesign --verify --verbose=1 "$APP"
 
 if [[ -z "${SKIP_DMG:-}" ]]; then

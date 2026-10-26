@@ -1,12 +1,15 @@
+// NotChi — https://github.com/Muzammil-cyber/NotChi
+// Copyright (c) 2026 Muhammad Muzammil Loya (https://muzammilloya.dev)
+// SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
+// Required Notice: keep this header in copies and derivatives (see LICENSE.md).
+
 import Foundation
 import Observation
 
-/// Samples CPU, memory and network once a second while the wings or the Stats tab are on screen.
+/// Samples CPU, memory and network every 2 s while the wings or the panel header show them.
 @MainActor
 @Observable
 final class StatsModel {
-    nonisolated static let historyLength = 60
-
     private(set) var cpu: Double = 0
     private(set) var memUsed: UInt64 = 0
     private(set) var memTotal: UInt64 = ProcessInfo.processInfo.physicalMemory
@@ -14,18 +17,13 @@ final class StatsModel {
     private(set) var downRate: Double = 0
     private(set) var upRate: Double = 0
 
-    private(set) var cpuHistory: [Double] = []
-    private(set) var memHistory: [Double] = []
-    private(set) var downHistory: [Double] = []
-    private(set) var upHistory: [Double] = []
-
     var memFraction: Double { memTotal > 0 ? Double(memUsed) / Double(memTotal) : 0 }
 
     @ObservationIgnored private var timer: Timer?
     @ObservationIgnored private var cpuSampler = CPUSampler()
     @ObservationIgnored private var memSampler = MemorySampler()
     @ObservationIgnored private var netSampler = NetworkSampler()
-    @ObservationIgnored private var tabVisible = false
+    @ObservationIgnored private var panelVisible = false
     @ObservationIgnored private var observing = false
 
     /// Begins following `Settings.showWings`; call once.
@@ -36,14 +34,14 @@ final class StatsModel {
         updateRunState()
     }
 
-    func setTabVisible(_ visible: Bool) {
-        tabVisible = visible
+    func setPanelVisible(_ visible: Bool) {
+        panelVisible = visible
         updateRunState()
     }
 
     func shutdown() {
         observing = false
-        tabVisible = false
+        panelVisible = false
         timer?.invalidate()
         timer = nil
     }
@@ -62,14 +60,9 @@ final class StatsModel {
     }
 
     private func updateRunState() {
-        let shouldRun = observing && (Settings.shared.showWings || tabVisible)
-        // The glanceable wings refresh every 2 s (each refresh re-lays out the panel);
-        // the Stats tab, where sparklines are watched, refreshes every second.
-        let interval: TimeInterval = tabVisible ? 1 : 2
-        if shouldRun, let current = timer, current.timeInterval != interval {
-            current.invalidate()
-            timer = nil
-        }
+        let shouldRun = observing && (Settings.shared.showWings || panelVisible)
+        // Glanceable numbers: every 2 s is enough, and each refresh re-lays out the panel.
+        let interval: TimeInterval = 2
         if shouldRun, timer == nil {
             tick()
             let t = Timer(timeInterval: interval, repeats: true) { [weak self] _ in
@@ -95,15 +88,5 @@ final class StatsModel {
         let net = netSampler.sample()
         downRate = net.down
         upRate = net.up
-
-        Self.push(&cpuHistory, cpu)
-        Self.push(&memHistory, memFraction)
-        Self.push(&downHistory, downRate)
-        Self.push(&upHistory, upRate)
-    }
-
-    private static func push(_ buffer: inout [Double], _ value: Double) {
-        buffer.append(value)
-        if buffer.count > historyLength { buffer.removeFirst(buffer.count - historyLength) }
     }
 }

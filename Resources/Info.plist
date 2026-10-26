@@ -34,6 +34,14 @@
     </array>
     <key>NSDownloadsFolderUsageDescription</key>
     <string>NotChi saves files received from your phone to Downloads and shows new AirDrop arrivals in the notch.</string>
+    <key>NSCalendarsFullAccessUsageDescription</key>
+    <string>NotChi shows today's events in the notch and finds Zoom, Meet, Teams and Webex links so you can join with one click. Events never leave your Mac.</string>
+    <key>NSCalendarsUsageDescription</key>
+    <string>NotChi shows today's events in the notch and finds meeting links so you can join with one click. Events never leave your Mac.</string>
+    <key>NSRemindersFullAccessUsageDescription</key>
+    <string>NotChi shows reminders due today in the notch so you can tick them off with one click. Reminders never leave your Mac.</string>
+    <key>NSRemindersUsageDescription</key>
+    <string>NotChi shows reminders due today in the notch so you can tick them off with one click.</string>
     <key>NSHumanReadableCopyright</key>
     <string>Copyright © 2026 Muhammad Muzammil Loya. PolyForm Noncommercial 1.0.0.</string>
 </dict>
