@@ -45,19 +45,10 @@ struct TextToolsView: View {
                 Button { model.select(tool) } label: { Label(tool.title, systemImage: tool.systemImage) }
             }
         } label: {
-            HStack(spacing: 5) {
-                Image(systemName: model.tool.systemImage).font(.system(size: 11))
-                Text(model.tool.title).font(.system(size: 12, weight: .semibold))
-                Image(systemName: "chevron.up.chevron.down").font(.system(size: 8, weight: .semibold)).opacity(0.5)
-            }
-            .foregroundStyle(.white.opacity(0.9))
-            .padding(.horizontal, 8)
-            .frame(height: 24)
-            .background(.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 6))
+            dropdownLabel(model.tool.title, systemImage: model.tool.systemImage, emphasized: true)
         }
-        .menuStyle(.borderlessButton)
-        .menuIndicator(.hidden)
-        .fixedSize()
+        .dropdownStyle()
+        .help("Choose a tool")
     }
 
     /// The one tool-specific control, only for tools that have a choice to make.
@@ -70,48 +61,52 @@ struct TextToolsView: View {
                 }
                 .pickerStyle(.inline)
             } label: {
-                optionLabel(model.indent.title)
+                dropdownLabel(model.indent.title)
             }
-            .menuStyle(.borderlessButton)
-            .menuIndicator(.hidden)
-            .fixedSize()
+            .dropdownStyle()
+            .help("Indentation")
         case .base64, .url:
             Button { model.direction = model.direction.flipped } label: {
-                HStack(spacing: 4) {
-                    Text(model.direction.title)
-                    Image(systemName: "arrow.left.arrow.right").font(.system(size: 9))
-                }
-                .font(.system(size: 11))
-                .foregroundStyle(.white.opacity(0.6))
-                .frame(height: 24)
-                .contentShape(Rectangle())
+                controlLabel(model.direction.title, trailingSymbol: "arrow.left.arrow.right")
             }
             .buttonStyle(.plain)
+            .help("Switch between encode and decode")
         case .uuid:
             Button { model.generateUUID() } label: {
-                HStack(spacing: 4) {
-                    Image(systemName: "arrow.clockwise").font(.system(size: 10))
-                    Text("New")
-                }
-                .font(.system(size: 11))
-                .foregroundStyle(.white.opacity(0.6))
-                .frame(height: 24)
-                .contentShape(Rectangle())
+                controlLabel("New", leadingSymbol: "arrow.clockwise")
             }
             .buttonStyle(.plain)
+            .help("Generate a new UUID")
         case .jwt, .time, .hash, .color:
             EmptyView()
         }
     }
 
-    private func optionLabel(_ text: String) -> some View {
-        HStack(spacing: 3) {
-            Text(text)
-            Image(systemName: "chevron.down").font(.system(size: 7, weight: .semibold))
+    /// A glass capsule with a chevron, so it reads as a pop-up menu.
+    private func dropdownLabel(_ title: String, systemImage: String? = nil, emphasized: Bool = false) -> some View {
+        HStack(spacing: 5) {
+            if let systemImage { Image(systemName: systemImage).font(.system(size: 11)) }
+            Text(title).font(.system(size: emphasized ? 12 : 11, weight: emphasized ? .semibold : .regular))
+            Image(systemName: "chevron.down").font(.system(size: 8, weight: .bold)).opacity(0.6)
         }
-        .font(.system(size: 11))
-        .foregroundStyle(.white.opacity(0.6))
+        .foregroundStyle(.white.opacity(emphasized ? 0.95 : 0.75))
+        .padding(.horizontal, 10)
         .frame(height: 24)
+        .notchGlass()
+        .contentShape(Capsule())
+    }
+
+    private func controlLabel(_ title: String, leadingSymbol: String? = nil, trailingSymbol: String? = nil) -> some View {
+        HStack(spacing: 5) {
+            if let leadingSymbol { Image(systemName: leadingSymbol).font(.system(size: 9, weight: .semibold)) }
+            Text(title).font(.system(size: 11))
+            if let trailingSymbol { Image(systemName: trailingSymbol).font(.system(size: 9, weight: .semibold)) }
+        }
+        .foregroundStyle(.white.opacity(0.75))
+        .padding(.horizontal, 10)
+        .frame(height: 24)
+        .notchGlass()
+        .contentShape(Capsule())
     }
 
     private var moreMenu: some View {
@@ -119,12 +114,13 @@ struct TextToolsView: View {
             Button("Use result as input") { model.useOutputAsInput() }.disabled(model.output == nil)
             Button("Clear") { model.clear() }.disabled(model.input.isEmpty)
         } label: {
-            Image(systemName: "ellipsis").font(.system(size: 12)).foregroundStyle(.white.opacity(0.6))
-                .frame(width: 24, height: 24).contentShape(Rectangle())
+            Image(systemName: "ellipsis").font(.system(size: 12, weight: .semibold)).foregroundStyle(.white.opacity(0.75))
+                .frame(width: 24, height: 24)
+                .notchGlass()
+                .contentShape(Capsule())
         }
-        .menuStyle(.borderlessButton)
-        .menuIndicator(.hidden)
-        .fixedSize()
+        .dropdownStyle()
+        .help("More")
     }
 
     private var copyButton: some View {
@@ -133,18 +129,19 @@ struct TextToolsView: View {
             if let text = model.output?.copyText { model.copy(text, id: TextToolsModel.allID) }
         } label: {
             HStack(spacing: 4) {
-                Image(systemName: copied ? "checkmark" : "doc.on.doc").font(.system(size: 10))
-                Text(copied ? "Copied" : "Copy").font(.system(size: 11, weight: .medium))
+                Image(systemName: copied ? "checkmark" : "doc.on.doc").font(.system(size: 10, weight: .semibold))
+                Text(copied ? "Copied" : "Copy").font(.system(size: 11, weight: .semibold))
             }
-            .foregroundStyle(.white.opacity(model.output == nil ? 0.35 : 0.95))
-            .padding(.horizontal, 10)
+            .foregroundStyle(.white.opacity(model.output == nil ? 0.35 : 1))
+            .padding(.horizontal, 12)
             .frame(height: 24)
-            .background(.white.opacity(model.output == nil ? 0.06 : 0.18), in: RoundedRectangle(cornerRadius: 6))
-            .contentShape(RoundedRectangle(cornerRadius: 6))
+            .notchGlass(prominent: model.output != nil)
+            .contentShape(Capsule())
         }
         .buttonStyle(.plain)
         .keyboardShortcut(.return, modifiers: .command)
         .disabled(model.output == nil)
+        .help("Copy result (⌘↩)")
     }
 
     // MARK: Panes
@@ -193,6 +190,17 @@ struct TextToolsView: View {
         .scrollIndicators(.hidden)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background(.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 8))
+    }
+}
+
+private extension View {
+    /// Shows a Menu's label exactly as drawn (the borderless style flattens it and drops
+    /// backgrounds), without the system's own indicator since the label has a chevron.
+    func dropdownStyle() -> some View {
+        menuStyle(.button)
+            .buttonStyle(.plain)
+            .menuIndicator(.hidden)
+            .fixedSize()
     }
 }
 

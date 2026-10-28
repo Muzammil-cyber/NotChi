@@ -68,22 +68,14 @@ final class DevModule: NotchModule {
 private struct DevView: View {
     let module: DevModule
 
-    private var selection: Binding<String> {
-        Binding(get: { module.selectedToolID }, set: { module.reveal(childID: $0) })
-    }
-
     var body: some View {
         VStack(spacing: 6) {
             // With a single tool there's nothing to pick; show it as is.
             if module.tools.count > 1 {
-                Picker("Tool", selection: selection) {
-                    ForEach(module.tools, id: \.id) { tool in
-                        Label(tool.title, systemImage: tool.systemImage).tag(tool.id)
-                    }
+                // Same sliding glass pill as the main tabs.
+                ModuleTabBar(modules: module.tools, selectedID: module.selectedToolID) { id in
+                    withAnimation(.spring(duration: 0.35, bounce: 0.2)) { module.reveal(childID: id) }
                 }
-                .pickerStyle(.segmented)
-                .labelsHidden()
-                .fixedSize()
             }
             if let tool = module.selectedTool {
                 module.view(for: tool)
