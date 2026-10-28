@@ -12,6 +12,9 @@ struct StashDropView: View {
     let store: StashStore
     @State private var targeted = false
     private let settings = Settings.shared
+    /// Empty, the strip is a slim drop hint so the tab content below gets the room.
+    static let emptyHeight: CGFloat = 36
+    static let filledHeight: CGFloat = 56
 
     init(store: StashStore) { self.store = store }
 
@@ -28,14 +31,13 @@ struct StashDropView: View {
                 }
             }
         }
+        // One height for the whole row, so the send tiles match the stash strip.
+        .frame(height: store.items.isEmpty ? Self.emptyHeight : Self.filledHeight)
     }
 
     private var stashStrip: some View {
         ZStack {
-            RoundedRectangle(cornerRadius: 10)
-                .fill(.white.opacity(targeted ? 0.10 : 0.03))
-            RoundedRectangle(cornerRadius: 10)
-                .strokeBorder(.white.opacity(targeted ? 0.6 : 0.2), style: StrokeStyle(lineWidth: 1, dash: [4]))
+            DropSurface(targeted: targeted)
             if store.items.isEmpty {
                 HStack(spacing: 6) {
                     Image(systemName: "tray.and.arrow.down")
@@ -52,17 +54,22 @@ struct StashDropView: View {
                         .padding(.horizontal, 6)
                     }
                     if store.items.contains(where: { !$0.pinned }) {
-                        Button("Clear") { store.clearUnpinned() }
-                            .buttonStyle(.plain)
-                            .font(.system(size: 11))
-                            .foregroundStyle(.white.opacity(0.5))
-                            .padding(.horizontal, 10)
-                            .help("Remove all unpinned items")
+                        Button { store.clearUnpinned() } label: {
+                            Text("Clear")
+                                .font(.system(size: 11, weight: .medium))
+                                .foregroundStyle(.white.opacity(0.75))
+                                .padding(.horizontal, 10)
+                                .frame(height: 24)
+                                .notchGlass()
+                                .contentShape(Capsule())
+                        }
+                        .buttonStyle(.plain)
+                        .padding(.trailing, 8)
+                        .help("Remove all unpinned items")
                     }
                 }
             }
         }
-        .frame(height: 56)
         .animation(.easeOut(duration: 0.12), value: targeted)
         .onDrop(of: [.fileURL, .image, .text, .url], isTargeted: $targeted) { providers in
             handle(providers)
@@ -233,15 +240,15 @@ private struct SendDropTarget: View {
     @State private var targeted = false
 
     var body: some View {
-        VStack(spacing: 3) {
-            Image(systemName: systemImage).font(.system(size: 15))
-            Text(title).font(.system(size: 10, weight: .medium))
+        HStack(spacing: 5) {
+            Image(systemName: systemImage).font(.system(size: 12))
+            Text(title).font(.system(size: 11, weight: .medium))
         }
         .foregroundStyle(.white.opacity(targeted ? 0.95 : 0.55))
-        .frame(width: 64, height: 56)
-        .background(RoundedRectangle(cornerRadius: 10).fill(.white.opacity(targeted ? 0.12 : 0.03)))
-        .overlay(RoundedRectangle(cornerRadius: 10)
-            .strokeBorder(.white.opacity(targeted ? 0.6 : 0.2), style: StrokeStyle(lineWidth: 1, dash: [4])))
+        .padding(.horizontal, 12)
+        .frame(maxHeight: .infinity)
+        .background(DropSurface(targeted: targeted))
+        .animation(.easeOut(duration: 0.12), value: targeted)
         .help("Drop files here to send them to your \(title)")
         .onDrop(of: [.fileURL], isTargeted: $targeted) { providers in
             Task { @MainActor in
@@ -257,5 +264,22 @@ private struct SendDropTarget: View {
             return true
         }
         .onChange(of: targeted) { _, value in NotchState.shared.holdOpen("send-drop-\(title)", value) }
+    }
+}
+
+/// Background of a drop target. It's content, not a control, so a flat fill rather than
+/// glass; the dashed outline appears only while something is dragged over it.
+private struct DropSurface: View {
+    let targeted: Bool
+
+    var body: some View {
+        RoundedRectangle(cornerRadius: 12)
+            .fill(.white.opacity(targeted ? 0.12 : 0.05))
+            .overlay {
+                if targeted {
+                    RoundedRectangle(cornerRadius: 12)
+                        .strokeBorder(.white.opacity(0.6), style: StrokeStyle(lineWidth: 1, dash: [4]))
+                }
+            }
     }
 }

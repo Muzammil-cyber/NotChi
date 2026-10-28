@@ -6,8 +6,8 @@
 import SwiftUI
 
 /// A row of tabs: inactive tabs show only their icon, the active tab its icon and title.
-/// One selection pill sits behind the row and slides to the active tab; on macOS 26+
-/// it's Liquid Glass.
+/// The row sits in a quiet capsule track; one selection pill slides to the active tab, and
+/// on macOS 26+ it's Liquid Glass.
 struct ModuleTabBar: View {
     let modules: [NotchModule]
     let selectedID: String
@@ -66,6 +66,10 @@ struct ModuleTabBar: View {
                     .matchedGeometryEffect(id: selectedID, in: namespace, properties: .frame, isSource: false)
             }
         }
+        // A plain track (not glass: the pill is the only glass, and glass can't sit on glass)
+        // groups the tabs into one control, like a macOS segmented control.
+        .padding(2)
+        .background(Capsule().fill(Color.white.opacity(0.06)))
     }
 }
 

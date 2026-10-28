@@ -136,22 +136,15 @@ private struct ExpandedContent: View {
                 }
                 .frame(width: sideWidth, alignment: .leading)
                 Spacer(minLength: state.geometry.notchSize.width)
-                HStack(spacing: 10) {
+                HStack(spacing: 6) {
                     if let readouts = host.headerAccessory {
+                        // Read-only status, so a plain capsule: glass is kept for controls.
                         readouts
+                            .padding(.horizontal, 10)
+                            .frame(height: 26)
+                            .background(Capsule().fill(Color.white.opacity(0.06)))
                     }
-                    HStack(spacing: 10) {
-                        Button { AppDelegate.shared?.showSettings() } label: {
-                            Image(systemName: "gearshape")
-                        }
-                        Button { NotchController.shared.collapse() } label: {
-                            Image(systemName: "chevron.up")
-                        }
-                    }
-                    .buttonStyle(.plain)
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(.white.opacity(0.6))
-                    .fixedSize()
+                    HeaderControls()
                 }
                 .frame(width: sideWidth, alignment: .trailing)
             }
@@ -189,6 +182,32 @@ private struct ExpandedContent: View {
             NotchController.shared.select(moduleID: id)
         }
         .fixedSize()
+    }
+}
+
+/// Settings and collapse, grouped in one glass capsule.
+private struct HeaderControls: View {
+    var body: some View {
+        HStack(spacing: 0) {
+            button("gearshape", help: "Settings") { AppDelegate.shared?.showSettings() }
+            button("chevron.up", help: "Close") { NotchController.shared.collapse() }
+        }
+        .padding(.horizontal, 2)
+        .frame(height: 26)
+        .notchGlass()
+        .fixedSize()
+    }
+
+    private func button(_ symbol: String, help: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: symbol)
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(.white.opacity(0.75))
+                .frame(width: 26, height: 26)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .help(help)
     }
 }
 
