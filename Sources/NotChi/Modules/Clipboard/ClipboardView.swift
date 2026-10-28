@@ -9,6 +9,7 @@ import SwiftUI
 /// Searchable clipboard history list with type filters and keyboard navigation.
 struct ClipboardView: View {
     let store: ClipboardStore
+    let onOpenInTextTools: (String) -> Void
 
     private enum Filter: String, CaseIterable, Identifiable {
         case all = "All", text = "Text", code = "Code", links = "Links", images = "Images", files = "Files"
@@ -146,7 +147,8 @@ struct ClipboardView: View {
                             ClipRow(item: item, selected: selection == item.id, shortcut: index < 9 ? index + 1 : nil, now: now,
                                     onPaste: { paste(item) },
                                     onPin: { store.togglePin(item) },
-                                    onDelete: { store.delete(item) })
+                                    onDelete: { store.delete(item) },
+                                    onOpenInTools: textToolsAction(for: item))
                                 .id(item.id)
                                 .onAppear { if index == items.count - 1 { store.loadMore() } }
                         }
@@ -191,6 +193,15 @@ struct ClipboardView: View {
         if let item = items.first(where: { $0.id == selection }) ?? items.first { paste(item) }
     }
 
+    /// Text-like items can be sent to the Dev tab's Text tool; nil hides the hover button.
+    private func textToolsAction(for item: ClipItem) -> (() -> Void)? {
+        guard Settings.shared.devEnabled, [.text, .code, .link, .richText].contains(item.kind) else { return nil }
+        return {
+            // List rows are capped; send the complete text.
+            if let text = store.fullItem(item).text { onOpenInTextTools(text) }
+        }
+    }
+
     private func runSearch() {
         store.search(query, filter: filter.storeFilter)
         selection = visible.first?.id
@@ -224,6 +235,7 @@ private struct ClipRow: View {
     let onPaste: () -> Void
     let onPin: () -> Void
     let onDelete: () -> Void
+    let onOpenInTools: (() -> Void)?
     @State private var hovering = false
 
     var body: some View {
@@ -245,6 +257,7 @@ private struct ClipRow: View {
             }
             if hovering {
                 HStack(spacing: 2) {
+                    if let onOpenInTools { actionButton("wand.and.stars", action: onOpenInTools) }
                     actionButton(item.pinned ? "pin.slash" : "pin", action: onPin)
                     actionButton("trash", action: onDelete)
                 }

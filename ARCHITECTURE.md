@@ -40,6 +40,7 @@ Sources/NotChi/
     Clipboard/        tab 2: clipboard history and the Stash strip
     Dev/              tab 3 (optional): DevModule holds developer tools
       PortSniper/       tool: listening ports, health, kill, Docker
+      TextTools/        tool: JSON, JWT, Base64, URL, Time, Hash, UUID, Color; the detector picks one from the clipboard
     SystemStats/      background module: CPU/RAM/net in the wings and the header
     Transfer/         AirDrop + Quick Share; not a module, a coordinator the shell shows
   Support/        AppPaths, Permissions, SQLite wrapper

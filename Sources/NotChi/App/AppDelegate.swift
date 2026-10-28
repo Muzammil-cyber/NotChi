@@ -19,8 +19,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         Self.shared = self
 
-        let clipboard = ClipboardModule()
-        let dev = DevModule(tools: [PortSniperModule()])
+        let textTools = TextToolsModule()
+        let clipboard = ClipboardModule(openInTextTools: { text in
+            textTools.model.load(text: text)
+            NotchController.shared.select(moduleID: textTools.id)
+        })
+        let dev = DevModule(tools: [PortSniperModule(), textTools])
         let stats = SystemStatsModule()
         nowPlaying = NowPlayingModule()
         // Pane order is also wing priority: music, then an upcoming meeting, then stats.
@@ -39,7 +43,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     /// Lets scripts (Raycast, Shortcuts, shell) drive the notch:
     /// post `com.notchi.app.open` with an optional tab or section id as the object
-    /// ("overview", "clipboard", "dev"; "nowplaying"/"calendar" open Overview, "ports" opens Dev),
+    /// ("overview", "clipboard", "dev"; "nowplaying"/"calendar" open Overview, "ports"/"texttools" open Dev),
     /// `com.notchi.app.close`, `com.notchi.app.settings` with an optional tab id,
     /// `com.notchi.app.send` with "iphone:<path>" / "android:<path>", or
     /// `com.notchi.app.media` with "toggle", "next" or "previous".

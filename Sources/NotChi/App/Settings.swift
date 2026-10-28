@@ -24,6 +24,8 @@ final class Settings {
     /// The Dev tab (Port Sniper and future developer tools).
     var devEnabled: Bool { didSet { defaults.set(devEnabled, forKey: "devEnabled") } }
     var portsShowAll: Bool { didSet { defaults.set(portsShowAll, forKey: "portsShowAll") } }
+    /// Pick the Text tool that fits the copied text when it opens.
+    var textToolsAutoDetect: Bool { didSet { defaults.set(textToolsAutoDetect, forKey: "textToolsAutoDetect") } }
     /// Which phone transfer services run. Only the chosen platform's services start.
     var phonePlatform: PhonePlatform { didSet { defaults.set(phonePlatform.rawValue, forKey: "phonePlatform") } }
     /// Advertise this Mac to Android phones on the Wi-Fi (Quick Share receive).
@@ -66,6 +68,7 @@ final class Settings {
             "clipboardExcludedApps": ["com.apple.keychainaccess", "com.1password.1password", "com.bitwarden.desktop"],
             "devEnabled": true,
             "portsShowAll": false,
+            "textToolsAutoDetect": true,
             "showMenuBarIcon": false,
             "phonePlatform": PhonePlatform.none.rawValue,
             "quickShareVisible": true,
@@ -86,6 +89,7 @@ final class Settings {
         clipboardExcludedApps = defaults.stringArray(forKey: "clipboardExcludedApps") ?? []
         devEnabled = defaults.bool(forKey: "devEnabled")
         portsShowAll = defaults.bool(forKey: "portsShowAll")
+        textToolsAutoDetect = defaults.bool(forKey: "textToolsAutoDetect")
         showMenuBarIcon = defaults.bool(forKey: "showMenuBarIcon")
         phonePlatform = PhonePlatform(rawValue: defaults.string(forKey: "phonePlatform") ?? "") ?? .none
         quickShareVisible = defaults.bool(forKey: "quickShareVisible")

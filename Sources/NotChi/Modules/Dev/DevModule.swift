@@ -3,22 +3,25 @@
 // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 // Required Notice: keep this header in copies and derivatives (see LICENSE.md).
 
+import Observation
 import SwiftUI
 
 /// The "Dev" tab: home for developer utilities (Port Sniper today). Optional, since not
 /// everyone writes code; turned off in Settings → Dev it's hidden and nothing runs.
 /// New developer tools go in `tools` rather than becoming top-level tabs.
 @MainActor
+@Observable
 final class DevModule: NotchModule {
     let id = "dev"
     let title = "Dev"
     let systemImage = "hammer"
 
-    let tools: [NotchModule]
-    private let settings = Settings.shared
-    private var visible = false
-    private var views: [String: AnyView] = [:]
-    /// The tool on screen when there are several.
+    @ObservationIgnored let tools: [NotchModule]
+    @ObservationIgnored private let settings = Settings.shared
+    @ObservationIgnored private var visible = false
+    @ObservationIgnored private var views: [String: AnyView] = [:]
+    /// The tool on screen when there are several. Observed so the picker follows `reveal`
+    /// (e.g. Clipboard sending text to the Text tool while Dev is already open).
     fileprivate var selectedToolID: String
 
     init(tools: [NotchModule]) {
@@ -64,18 +67,16 @@ final class DevModule: NotchModule {
 
 private struct DevView: View {
     let module: DevModule
-    @State private var selection: String
 
-    init(module: DevModule) {
-        self.module = module
-        _selection = State(initialValue: module.selectedToolID)
+    private var selection: Binding<String> {
+        Binding(get: { module.selectedToolID }, set: { module.reveal(childID: $0) })
     }
 
     var body: some View {
         VStack(spacing: 6) {
             // With a single tool there's nothing to pick; show it as is.
             if module.tools.count > 1 {
-                Picker("Tool", selection: $selection) {
+                Picker("Tool", selection: selection) {
                     ForEach(module.tools, id: \.id) { tool in
                         Label(tool.title, systemImage: tool.systemImage).tag(tool.id)
                     }
@@ -83,9 +84,8 @@ private struct DevView: View {
                 .pickerStyle(.segmented)
                 .labelsHidden()
                 .fixedSize()
-                .onChange(of: selection) { _, id in module.reveal(childID: id) }
             }
-            if let tool = module.tools.first(where: { $0.id == selection }) {
+            if let tool = module.selectedTool {
                 module.view(for: tool)
                     .id(tool.id)
                     .transition(.opacity)

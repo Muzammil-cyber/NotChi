@@ -1,6 +1,6 @@
 # NotChi
 
-> NotChi is a free, source-available macOS app, written natively in Swift, that turns the MacBook notch into a command center. On Macs without a notch it shows as a small pill at the top center of the screen. Its modules are clipboard history, a drag-and-drop stash, a Dev tab of developer utilities (Port Sniper for dev servers and Docker ports), an Overview tab with Now Playing and a calendar agenda (one-click meeting joins) side by side, and live system stats beside the notch. It also transfers files with iPhone (AirDrop) and with Android (native Quick Share, no companion app). Copyright (c) 2026 Muhammad Muzammil Loya. Licensed under PolyForm Noncommercial 1.0.0.
+> NotChi is a free, source-available macOS app, written natively in Swift, that turns the MacBook notch into a command center. On Macs without a notch it shows as a small pill at the top center of the screen. Its modules are clipboard history, a drag-and-drop stash, a Dev tab of developer utilities (Port Sniper for dev servers and Docker ports, and Text tools: JSON, JWT, Base64, URL, Time, Hash, UUID and Color, chosen automatically from the clipboard), an Overview tab with Now Playing and a calendar agenda (one-click meeting joins) side by side, and live system stats beside the notch. It also transfers files with iPhone (AirDrop) and with Android (native Quick Share, no companion app). Copyright (c) 2026 Muhammad Muzammil Loya. Licensed under PolyForm Noncommercial 1.0.0.
 
 Key facts:
 

@@ -13,7 +13,7 @@ struct DevSettingsPane: View {
             Section {
                 Toggle(isOn: $settings.devEnabled) {
                     Text("Show Dev tab")
-                    Text("Developer utilities: Port Sniper (more coming). Off hides the tab; nothing runs.")
+                    Text("Developer utilities: Port Sniper and Text tools. Off hides the tab; nothing runs.")
                         .font(.caption).foregroundStyle(.secondary)
                 }
                 .toggleStyle(.switch)
@@ -22,6 +22,14 @@ struct DevSettingsPane: View {
                 Toggle(isOn: $settings.portsShowAll) {
                     Text("Show all listening ports")
                     Text("By default only dev servers and Docker/OrbStack containers are listed; system services and desktop apps are hidden.")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+                .toggleStyle(.switch)
+            }
+            Section("Text tools") {
+                Toggle(isOn: $settings.textToolsAutoDetect) {
+                    Text("Pick the tool from the clipboard")
+                    Text("JSON, JWT, Base64, URL, Time, Hash, UUID and Color. When you open Text, the latest copy is loaded and the matching tool chosen. Passwords and other copies that clipboard history ignores are never loaded. Nothing is saved or sent anywhere.")
                         .font(.caption).foregroundStyle(.secondary)
                 }
                 .toggleStyle(.switch)

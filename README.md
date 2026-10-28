@@ -14,6 +14,7 @@ Hover over the notch, or press **⌥⌘N**, to open it.
 | **Clipboard** | Automatic history of text, rich text, code, links, images and files. Includes search and type filters. Click an item to paste it into the app you're using. |
 | **Stash** | A permanent drop zone at the top of the panel. Drag files, images or text in, pin what you want to keep, and drag items back out anywhere. |
 | **Dev** | Developer utilities. Optional: turn it off in Settings → Dev if you don't code. |
+| ↳ Text | Eight text utilities (JSON, JWT, Base64, URL, Time, Hash, UUID, Color). Opening it loads the latest copy and picks the matching tool. Passwords and other copies that clipboard history ignores are never loaded, and nothing you paste is saved or sent anywhere. In Clipboard, hover a text item and use the wand button to open it here. |
 | ↳ Port Sniper | Lists the local dev servers that are listening, with a live health check and latency for each. One click kills a stuck process. |
 | **Stats** | CPU, memory pressure and network up/down beside the notch while collapsed, and next to the settings button while open. |
 | **Phone transfer** | Send and receive files with your iPhone (AirDrop) or Android phone (Quick Share). Choose your phone in Settings → Phone. |

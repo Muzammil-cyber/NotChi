@@ -32,6 +32,14 @@ enum Paster {
         ignoredChangeCount = pb.changeCount
     }
 
+    /// Copies plain text (a tool's result) without adding it to the history.
+    static func copy(text: String) {
+        let pb = NSPasteboard.general
+        pb.clearContents()
+        pb.setString(text, forType: .string)
+        ignoredChangeCount = pb.changeCount
+    }
+
     /// Copies, collapses the notch, then sends Cmd+V when allowed. Returns whether it will auto-paste.
     @discardableResult
     static func paste(_ item: ClipItem) -> Bool {

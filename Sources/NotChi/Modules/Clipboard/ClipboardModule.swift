@@ -17,7 +17,11 @@ final class ClipboardModule: NotchModule {
     /// Shared with phone transfer, which drops received files into the stash.
     let stash = StashStore()
 
-    init() {
+    /// Sends text to the Dev tab's Text tool (nil when that tool isn't available).
+    private let openInTextTools: (String) -> Void
+
+    init(openInTextTools: @escaping (String) -> Void) {
+        self.openInTextTools = openInTextTools
         monitor.onItem = { [store] item in store.add(item) }
     }
 
@@ -45,6 +49,6 @@ final class ClipboardModule: NotchModule {
         }
     }
 
-    func makeExpandedView() -> AnyView { AnyView(ClipboardView(store: store)) }
+    func makeExpandedView() -> AnyView { AnyView(ClipboardView(store: store, onOpenInTextTools: openInTextTools)) }
     func makeStashView() -> AnyView { AnyView(StashDropView(store: stash)) }
 }
