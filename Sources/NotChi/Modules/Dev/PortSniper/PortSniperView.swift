@@ -13,6 +13,10 @@ struct PortSniperView: View {
     @State private var confirmingID: String?
     @State private var confirmTask: Task<Void, Never>?
 
+    #if DEBUG
+    @ObserveInjection var forceRedraw
+    #endif
+
     var body: some View {
         VStack(spacing: 6) {
             header
@@ -30,6 +34,7 @@ struct PortSniperView: View {
             }
         }
         .onDisappear { setConfirming(nil) }
+        .enableInjection()
     }
 
     private var confirmingBinding: Binding<String?> {
@@ -98,6 +103,10 @@ private struct PortRow: View {
     private var isKilling: Bool { model.killing.contains(entry.id) }
     private var isConfirming: Bool { confirmingID == entry.id }
 
+    #if DEBUG
+    @ObserveInjection var forceRedraw
+    #endif
+
     var body: some View {
         HStack(spacing: 10) {
             Circle().fill(statusColor).frame(width: 8, height: 8)
@@ -135,6 +144,7 @@ private struct PortRow: View {
         .padding(.vertical, 5)
         .background(RoundedRectangle(cornerRadius: 8).fill(.white.opacity(0.06)))
         .opacity(isKilling ? 0.4 : 1)
+        .enableInjection()
     }
 
     private var buttons: some View {

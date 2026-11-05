@@ -8,6 +8,10 @@ import SwiftUI
 struct PermissionsSettingsPane: View {
     private let accessibility = AccessibilityStatus.shared
 
+    #if DEBUG
+    @ObserveInjection var forceRedraw
+    #endif
+
     var body: some View {
         Form {
             Section("Accessibility") {
@@ -44,5 +48,6 @@ struct PermissionsSettingsPane: View {
         }
         .settingsPaneStyle()
         .onAppear { accessibility.refresh() }
+        .enableInjection()
     }
 }

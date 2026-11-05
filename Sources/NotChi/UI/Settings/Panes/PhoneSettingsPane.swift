@@ -8,6 +8,10 @@ import SwiftUI
 struct PhoneSettingsPane: View {
     @Bindable private var settings = Settings.shared
 
+    #if DEBUG
+    @ObserveInjection var forceRedraw
+    #endif
+
     var body: some View {
         Form {
             Section {
@@ -69,6 +73,7 @@ struct PhoneSettingsPane: View {
             }
         }
         .settingsPaneStyle()
+        .enableInjection()
     }
 }
 

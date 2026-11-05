@@ -9,19 +9,29 @@ import SwiftUI
 struct NowPlayingLeftWing: View {
     let model: NowPlayingModel
 
+    #if DEBUG
+    @ObserveInjection var forceRedraw
+    #endif
+
     var body: some View {
         ArtworkView(image: model.artwork, size: 20, radius: 5)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .enableInjection()
     }
 }
 
 struct NowPlayingRightWing: View {
     let model: NowPlayingModel
 
+    #if DEBUG
+    @ObserveInjection var forceRedraw
+    #endif
+
     var body: some View {
         EqualizerBars(animating: model.isPlaying)
             .frame(width: 18, height: 14)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .enableInjection()
     }
 }
 

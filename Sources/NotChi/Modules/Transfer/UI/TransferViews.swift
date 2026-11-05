@@ -130,6 +130,10 @@ struct TransferWing: View {
     let coordinator: TransferCoordinator
     let side: Side
 
+    #if DEBUG
+    @ObserveInjection var forceRedraw
+    #endif
+
     var body: some View {
         Group {
             if let activity = coordinator.current {
@@ -150,6 +154,7 @@ struct TransferWing: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .enableInjection()
     }
 
     private func symbol(for activity: TransferActivity) -> String {

@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 // Required Notice: keep this header in copies and derivatives (see LICENSE.md).
 
+import AppKit
 import SwiftUI
 
 // MARK: - Expanded view
@@ -13,6 +14,10 @@ import SwiftUI
 struct CalendarExpandedView: View {
     let model: CalendarModel
     private let settings = Settings.shared
+
+    #if DEBUG
+    @ObserveInjection var forceRedraw
+    #endif
 
     var body: some View {
         // Re-evaluated each minute while on screen: countdowns, the date, what's "next".
@@ -38,6 +43,7 @@ struct CalendarExpandedView: View {
             .padding(.top, 6)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         }
+        .enableInjection()
     }
 
     private func agenda(now: Date) -> some View {
@@ -146,77 +152,70 @@ struct CalendarExpandedView: View {
 }
 
 /// Today's date as a tile, after the macOS Calendar widget: the weekday in red, the day
-/// number large, the month underneath, all centered and as wide as the day number.
-private struct DateTile: View {
+/// number large, the month underneath, all centered.
+struct DateTile: View {
     let date: Date
 
+    #if DEBUG
+    @ObserveInjection var forceRedraw
+    #endif
+
+    /// Width every line is sized to; the font size is derived from it, so the three lines
+    /// are the same width and differ in size.
+    private static let lineWidth: CGFloat = 76
+
     var body: some View {
-        DateTileLayout(spacing: 1) {
-            fitted(date.formatted(.dateTime.weekday(.abbreviated)).uppercased(), weight: .bold)
+        VStack(spacing: 0) {
+            line(date.formatted(.dateTime.weekday(.abbreviated)).uppercased(), weight: .bold)
                 .foregroundStyle(Color(red: 1, green: 0.27, blue: 0.23))
-            Text(date.formatted(.dateTime.day()))
-                .font(.system(size: 44, weight: .medium))
-                .monospacedDigit()
+                .padding(.bottom,-15)
+            line(date.formatted(.dateTime.day(.twoDigits)), weight: .semibold, digits: true)
                 .foregroundStyle(.white.opacity(0.92))
-                .fixedSize()
-            fitted(date.formatted(.dateTime.month(.wide)), weight: .semibold)
-                .foregroundStyle(.white.opacity(0.5))
+            line(date.formatted(.dateTime.month(.wide)).uppercased(), weight: .semibold)
+                .foregroundStyle(.white.opacity(0.55))
+                .padding(.top,-6)
         }
-        .padding(.horizontal, 12)
+        .padding(.horizontal, 30)
         .padding(.vertical, 10)
-        .frame(minWidth: 76)
+        .frame(width: Self.lineWidth + 30)
         .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(.white.opacity(0.07)))
         .accessibilityElement(children: .combine)
         .accessibilityLabel(date.formatted(date: .complete, time: .omitted))
+        .enableInjection()
     }
 
-    /// Set large, then scaled down until it spans exactly the width it's offered.
-    private func fitted(_ text: String, weight: Font.Weight) -> some View {
-        Text(text)
-            .font(.system(size: 40, weight: weight))
+    /// One line of the tile, at the font size that makes `text` exactly `lineWidth` wide.
+    private func line(_ text: String, weight: Font.Weight, digits: Bool = false) -> some View {
+        let probe: CGFloat = 100
+        let nsWeight: NSFont.Weight = weight == .bold ? .bold : .semibold
+        let font = digits
+            ? NSFont.monospacedDigitSystemFont(ofSize: probe, weight: nsWeight)
+            : NSFont.systemFont(ofSize: probe, weight: nsWeight)
+        let measured = (text as NSString).size(withAttributes: [.font: font]).width
+        let size = measured > 0 ? probe * Self.lineWidth / measured : probe
+        return Text(text)
+            .font(.system(size: size, weight: weight))
+            .monospacedDigit()
             .lineLimit(1)
-            .minimumScaleFactor(0.05)
+            .fixedSize()
+            .frame(width: Self.lineWidth)
     }
 }
 
-/// Stacks views centered, sized to the width of the middle one (the day number): the
-/// views above and below are offered exactly that width.
-private struct DateTileLayout: Layout {
-    var spacing: CGFloat
 
-    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
-        let width = referenceWidth(subviews)
-        let heights = sizes(subviews, width: width).map(\.height)
-        return CGSize(width: width, height: heights.reduce(0, +) + spacing * CGFloat(max(0, subviews.count - 1)))
-    }
 
-    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
-        let width = referenceWidth(subviews)
-        var y = bounds.minY
-        for (subview, size) in zip(subviews, sizes(subviews, width: width)) {
-            subview.place(at: CGPoint(x: bounds.midX, y: y), anchor: .top,
-                          proposal: ProposedViewSize(width: width, height: size.height))
-            y += size.height + spacing
-        }
-    }
-
-    private func referenceWidth(_ subviews: Subviews) -> CGFloat {
-        guard subviews.count > 1 else { return subviews.first?.sizeThatFits(.unspecified).width ?? 0 }
-        return subviews[1].sizeThatFits(.unspecified).width
-    }
-
-    private func sizes(_ subviews: Subviews, width: CGFloat) -> [CGSize] {
-        subviews.map { $0.sizeThatFits(ProposedViewSize(width: width, height: nil)) }
-    }
-}
 
 /// The event happening now, or the next one: status, title, place and the Join button.
-private struct HeroCard: View {
+struct HeroCard: View {
     let event: AgendaEvent
     let now: Date
 
     private var isNow: Bool { event.start <= now }
     private var minutesAway: Int { Int((event.start.timeIntervalSince(now) / 60).rounded(.up)) }
+
+    #if DEBUG
+    @ObserveInjection var forceRedraw
+    #endif
 
     var body: some View {
         HStack(alignment: .top, spacing: 9) {
@@ -245,6 +244,7 @@ private struct HeroCard: View {
         }
         .padding(10)
         .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(event.color.opacity(0.12)))
+        .enableInjection()
     }
 
     private var status: String {
@@ -264,8 +264,12 @@ private struct HeroCard: View {
 }
 
 /// Later events: time, color dot, title, and a small video icon when there's a link.
-private struct CompactEventRow: View {
+struct CompactEventRow: View {
     let event: AgendaEvent
+
+    #if DEBUG
+    @ObserveInjection var forceRedraw
+    #endif
 
     var body: some View {
         HStack(spacing: 8) {
@@ -287,12 +291,17 @@ private struct CompactEventRow: View {
                 .help("Join on \(meeting.service.rawValue)")
             }
         }
+        .enableInjection()
     }
 }
 
-private struct SectionLabel: View {
+struct SectionLabel: View {
     let title: String
     let count: Int
+
+    #if DEBUG
+    @ObserveInjection var forceRedraw
+    #endif
 
     var body: some View {
         HStack(spacing: 5) {
@@ -302,15 +311,20 @@ private struct SectionLabel: View {
         }
         .font(.system(size: 9, weight: .bold))
         .foregroundStyle(.white.opacity(0.45))
+        .enableInjection()
     }
 }
 
 /// One reminder with the Reminders-style circle: a single click ticks it off.
-private struct ReminderRow: View {
+struct ReminderRow: View {
     let item: ReminderItem
     let now: Date
     let done: Bool
     let complete: () -> Void
+
+    #if DEBUG
+    @ObserveInjection var forceRedraw
+    #endif
 
     var body: some View {
         HStack(alignment: .firstTextBaseline, spacing: 8) {
@@ -346,6 +360,7 @@ private struct ReminderRow: View {
             }
         }
         .transition(.opacity)
+        .enableInjection()
     }
 
     private var dueLabel: String? {
@@ -358,7 +373,7 @@ private struct ReminderRow: View {
 }
 
 /// Like the transfer card's `PillButtonStyle`, with a custom tint (green to join a live call).
-private struct TintedPillButtonStyle: ButtonStyle {
+struct TintedPillButtonStyle: ButtonStyle {
     let tint: Color
 
     func makeBody(configuration: Configuration) -> some View {
@@ -371,4 +386,10 @@ private struct TintedPillButtonStyle: ButtonStyle {
             .opacity(configuration.isPressed ? 0.7 : 1)
             .contentShape(Capsule())
     }
+}
+
+#Preview("Date tile") {
+    DateTile(date: .now)
+        .padding(20)
+        .background(.black)
 }

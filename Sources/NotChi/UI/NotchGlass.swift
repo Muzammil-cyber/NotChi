@@ -20,6 +20,10 @@ private struct NotchGlassBackground: ViewModifier {
     /// it starts as a plain fill and turns to glass once the panel is in.
     @State private var ready = false
 
+    #if DEBUG
+    @ObserveInjection var forceRedraw
+    #endif
+
     func body(content: Content) -> some View {
         content
             .background { fill }
@@ -27,6 +31,7 @@ private struct NotchGlassBackground: ViewModifier {
                 try? await Task.sleep(for: .milliseconds(320))
                 ready = true
             }
+        .enableInjection()
     }
 
     @ViewBuilder private var fill: some View {

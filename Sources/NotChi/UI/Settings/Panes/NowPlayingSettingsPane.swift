@@ -8,6 +8,10 @@ import SwiftUI
 struct NowPlayingSettingsPane: View {
     @Bindable private var settings = Settings.shared
 
+    #if DEBUG
+    @ObserveInjection var forceRedraw
+    #endif
+
     var body: some View {
         Form {
             Section {
@@ -35,5 +39,6 @@ struct NowPlayingSettingsPane: View {
             }
         }
         .settingsPaneStyle()
+        .enableInjection()
     }
 }

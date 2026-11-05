@@ -9,6 +9,10 @@ struct CalendarSettingsPane: View {
     @Bindable private var settings = Settings.shared
     private let model = CalendarModel.shared
 
+    #if DEBUG
+    @ObserveInjection var forceRedraw
+    #endif
+
     var body: some View {
         Form {
             Section {
@@ -53,6 +57,7 @@ struct CalendarSettingsPane: View {
         }
         .settingsPaneStyle()
         .onAppear { model.reload() }
+        .enableInjection()
     }
 
     private func shown(_ id: String) -> Binding<Bool> {
@@ -67,6 +72,10 @@ struct CalendarSettingsPane: View {
 /// Calendar access state with the button that fixes it.
 struct CalendarAccessRow: View {
     private let model = CalendarModel.shared
+
+    #if DEBUG
+    @ObserveInjection var forceRedraw
+    #endif
 
     var body: some View {
         LabeledContent {
@@ -83,12 +92,17 @@ struct CalendarAccessRow: View {
             Text("Read-only: NotChi shows events and finds meeting links. Nothing leaves your Mac.")
                 .font(.caption).foregroundStyle(.secondary)
         }
+        .enableInjection()
     }
 }
 
 /// Reminders access state with the button that fixes it.
 struct RemindersAccessRow: View {
     private let model = CalendarModel.shared
+
+    #if DEBUG
+    @ObserveInjection var forceRedraw
+    #endif
 
     var body: some View {
         LabeledContent {
@@ -105,5 +119,6 @@ struct RemindersAccessRow: View {
             Text("Shows reminders due today and lets you tick them off. Nothing leaves your Mac.")
                 .font(.caption).foregroundStyle(.secondary)
         }
+        .enableInjection()
     }
 }

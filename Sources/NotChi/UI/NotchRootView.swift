@@ -48,6 +48,10 @@ struct NotchRootView: View {
         state.isExpanded ? 0 : (rightWidth - leftWidth) / 2
     }
 
+    #if DEBUG
+    @ObserveInjection var forceRedraw
+    #endif
+
     var body: some View {
         let size = shapeSize
         let expanded = state.isExpanded
@@ -87,6 +91,7 @@ struct NotchRootView: View {
         .animation(.easeInOut(duration: 0.2), value: state.leftWingWidth)
         .animation(.easeInOut(duration: 0.2), value: state.rightWingWidth)
         .environment(\.colorScheme, .dark)
+        .enableInjection()
     }
 }
 
@@ -98,6 +103,10 @@ private struct CollapsedWings: View {
     let transferActive: Bool
     let claimant: NotchModule?
 
+    #if DEBUG
+    @ObserveInjection var forceRedraw
+    #endif
+
     var body: some View {
         let height = state.geometry.collapsedHeight(withWings: true)
         HStack(spacing: 0) {
@@ -106,6 +115,7 @@ private struct CollapsedWings: View {
             if right > 0 { wing(.right).frame(width: right, height: height).clipped() }
         }
         .foregroundStyle(.white)
+        .enableInjection()
     }
 
     @ViewBuilder private func wing(_ side: TransferWing.Side) -> some View {
@@ -123,6 +133,10 @@ private struct CollapsedWings: View {
 private struct ExpandedContent: View {
     let state: NotchState
     let host: ModuleHost
+
+    #if DEBUG
+    @ObserveInjection var forceRedraw
+    #endif
 
     var body: some View {
         VStack(spacing: 8) {
@@ -168,6 +182,7 @@ private struct ExpandedContent: View {
         .padding(.horizontal, 8)
         .padding(.bottom, 16)
         .foregroundStyle(.white)
+        .enableInjection()
     }
 
     /// Width available on each side of the notch inside the header row.
@@ -187,6 +202,10 @@ private struct ExpandedContent: View {
 
 /// Settings and collapse, grouped in one glass capsule.
 private struct HeaderControls: View {
+    #if DEBUG
+    @ObserveInjection var forceRedraw
+    #endif
+
     var body: some View {
         HStack(spacing: 0) {
             button("gearshape", help: "Settings") { AppDelegate.shared?.showSettings() }
@@ -196,6 +215,7 @@ private struct HeaderControls: View {
         .frame(height: 26)
         .notchGlass()
         .fixedSize()
+        .enableInjection()
     }
 
     private func button(_ symbol: String, help: String, action: @escaping () -> Void) -> some View {
@@ -214,11 +234,16 @@ private struct HeaderControls: View {
 /// Fades scrolling content out over the last few points instead of cutting rows in half
 /// against the panel's rounded bottom.
 private struct BottomFade: View {
+    #if DEBUG
+    @ObserveInjection var forceRedraw
+    #endif
+
     var body: some View {
         VStack(spacing: 0) {
             Color.black
             LinearGradient(colors: [.black, .clear], startPoint: .top, endPoint: .bottom)
                 .frame(height: 14)
         }
+        .enableInjection()
     }
 }

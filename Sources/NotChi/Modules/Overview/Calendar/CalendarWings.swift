@@ -10,6 +10,10 @@ import SwiftUI
 struct CalendarLeftWing: View {
     let model: CalendarModel
 
+    #if DEBUG
+    @ObserveInjection var forceRedraw
+    #endif
+
     var body: some View {
         Group {
             if let item = model.imminent {
@@ -20,6 +24,7 @@ struct CalendarLeftWing: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .enableInjection()
     }
 
     static func symbol(for kind: WingItem.Kind) -> String {
@@ -35,6 +40,10 @@ struct CalendarLeftWing: View {
 struct CalendarRightWing: View {
     let model: CalendarModel
 
+    #if DEBUG
+    @ObserveInjection var forceRedraw
+    #endif
+
     var body: some View {
         TimelineView(.everyMinute) { context in
             if let item = model.imminent {
@@ -45,6 +54,7 @@ struct CalendarRightWing: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .enableInjection()
     }
 
     static func countdown(to start: Date, now: Date) -> String {

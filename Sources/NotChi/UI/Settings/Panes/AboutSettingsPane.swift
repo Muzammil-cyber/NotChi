@@ -6,6 +6,10 @@
 import SwiftUI
 
 struct AboutSettingsPane: View {
+    #if DEBUG
+    @ObserveInjection var forceRedraw
+    #endif
+
     var body: some View {
         Form {
             Section {
@@ -40,5 +44,6 @@ struct AboutSettingsPane: View {
             }
         }
         .settingsPaneStyle()
+        .enableInjection()
     }
 }

@@ -10,6 +10,10 @@ struct TextToolsView: View {
     let model: TextToolsModel
     @FocusState private var inputFocused: Bool
 
+    #if DEBUG
+    @ObserveInjection var forceRedraw
+    #endif
+
     var body: some View {
         VStack(spacing: 6) {
             header
@@ -24,6 +28,7 @@ struct TextToolsView: View {
             if focused { NotchController.shared.focusPanel() }
         }
         .onDisappear { NotchState.shared.holdOpen("texttools-input", false) }
+        .enableInjection()
     }
 
     // MARK: Header

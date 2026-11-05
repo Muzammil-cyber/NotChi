@@ -68,6 +68,10 @@ final class DevModule: NotchModule {
 private struct DevView: View {
     let module: DevModule
 
+    #if DEBUG
+    @ObserveInjection var forceRedraw
+    #endif
+
     var body: some View {
         VStack(spacing: 6) {
             // With a single tool there's nothing to pick; show it as is.
@@ -84,5 +88,6 @@ private struct DevView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .enableInjection()
     }
 }

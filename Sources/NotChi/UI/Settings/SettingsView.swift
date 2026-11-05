@@ -79,6 +79,10 @@ struct SettingsView: View {
 
     private var activeTab: SettingsTab { navigation.selectedTab ?? .general }
 
+    #if DEBUG
+    @ObserveInjection var forceRedraw
+    #endif
+
     var body: some View {
         NavigationSplitView(columnVisibility: .constant(.all)) {
             List(selection: $navigation.selectedTab) {
@@ -114,6 +118,7 @@ struct SettingsView: View {
             }
         }
         .onChange(of: navigation.selectedTab) { _, tab in record(tab) }
+        .enableInjection()
     }
 
     @ViewBuilder private var detail: some View {

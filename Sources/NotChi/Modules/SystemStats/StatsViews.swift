@@ -32,6 +32,10 @@ enum StatsFormat {
 struct StatsHeaderView: View {
     let model: StatsModel
 
+    #if DEBUG
+    @ObserveInjection var forceRedraw
+    #endif
+
     var body: some View {
         ViewThatFits(in: .horizontal) {
             readouts(labels: true)
@@ -42,6 +46,7 @@ struct StatsHeaderView: View {
         .foregroundStyle(.white.opacity(0.75))
         .lineLimit(1)
         .accessibilityElement(children: .combine)
+        .enableInjection()
     }
 
     private func readouts(labels: Bool) -> some View {

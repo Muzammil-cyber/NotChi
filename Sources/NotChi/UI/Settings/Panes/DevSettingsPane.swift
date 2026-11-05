@@ -8,6 +8,10 @@ import SwiftUI
 struct DevSettingsPane: View {
     @Bindable private var settings = Settings.shared
 
+    #if DEBUG
+    @ObserveInjection var forceRedraw
+    #endif
+
     var body: some View {
         Form {
             Section {
@@ -40,5 +44,6 @@ struct DevSettingsPane: View {
             }
         }
         .settingsPaneStyle()
+        .enableInjection()
     }
 }

@@ -9,6 +9,10 @@ import SwiftUI
 struct StatsLeftWing: View {
     let model: StatsModel
 
+    #if DEBUG
+    @ObserveInjection var forceRedraw
+    #endif
+
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
             HStack(spacing: 4) {
@@ -41,12 +45,17 @@ struct StatsLeftWing: View {
         }
         .padding(.horizontal, 8)
         .frame(maxHeight: .infinity)
+        .enableInjection()
     }
 }
 
 /// Right wing: download and upload rates stacked.
 struct StatsRightWing: View {
     let model: StatsModel
+
+    #if DEBUG
+    @ObserveInjection var forceRedraw
+    #endif
 
     var body: some View {
         VStack(alignment: .leading, spacing: 1) {
@@ -55,6 +64,7 @@ struct StatsRightWing: View {
         }
         .padding(.horizontal, 8)
         .frame(maxHeight: .infinity)
+        .enableInjection()
     }
 
     private func row(_ arrow: String, _ rate: Double, _ color: Color) -> some View {
@@ -77,6 +87,10 @@ private struct ProgressBar: View {
     let fraction: Double
     let tint: Color
 
+    #if DEBUG
+    @ObserveInjection var forceRedraw
+    #endif
+
     var body: some View {
         GeometryReader { geo in
             ZStack(alignment: .leading) {
@@ -84,5 +98,6 @@ private struct ProgressBar: View {
                 Capsule().fill(tint).frame(width: geo.size.width * min(1, max(0, fraction)))
             }
         }
+        .enableInjection()
     }
 }

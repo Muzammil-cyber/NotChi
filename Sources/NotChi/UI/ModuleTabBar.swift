@@ -20,6 +20,10 @@ struct ModuleTabBar: View {
     /// the pill starts as a plain fill and switches to glass once the panel is fully in.
     @State private var glassReady = false
 
+    #if DEBUG
+    @ObserveInjection var forceRedraw
+    #endif
+
     var body: some View {
         // No GlassEffectContainer: there's only one glass shape, and a container would draw
         // it above the labels instead of behind them.
@@ -27,6 +31,7 @@ struct ModuleTabBar: View {
             try? await Task.sleep(for: .milliseconds(320))
             glassReady = true
         }
+        .enableInjection()
     }
 
     private var row: some View {

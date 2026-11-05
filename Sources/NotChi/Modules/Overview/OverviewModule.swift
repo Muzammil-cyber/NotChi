@@ -52,6 +52,10 @@ final class OverviewModule: NotchModule {
 private struct OverviewView: View {
     let module: OverviewModule
 
+    #if DEBUG
+    @ObserveInjection var forceRedraw
+    #endif
+
     var body: some View {
         let panes = module.enabledPanes
         HStack(spacing: 0) {
@@ -74,5 +78,6 @@ private struct OverviewView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .onChange(of: panes.map(\.id)) { _, _ in module.syncVisibility() }
+        .enableInjection()
     }
 }

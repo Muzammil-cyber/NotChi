@@ -18,6 +18,10 @@ struct StashDropView: View {
 
     init(store: StashStore) { self.store = store }
 
+    #if DEBUG
+    @ObserveInjection var forceRedraw
+    #endif
+
     var body: some View {
         HStack(spacing: 6) {
             stashStrip
@@ -33,6 +37,7 @@ struct StashDropView: View {
         }
         // One height for the whole row, so the send tiles match the stash strip.
         .frame(height: store.items.isEmpty ? Self.emptyHeight : Self.filledHeight)
+        .enableInjection()
     }
 
     private var stashStrip: some View {
@@ -133,6 +138,10 @@ private struct StashChip: View {
     let store: StashStore
     @State private var hovering = false
 
+    #if DEBUG
+    @ObserveInjection var forceRedraw
+    #endif
+
     var body: some View {
         HStack(spacing: 6) {
             icon.frame(width: 34, height: 34)
@@ -176,6 +185,7 @@ private struct StashChip: View {
         .padding(.top, 5)
         .onHover { hovering = $0 }
         .help(item.pinned ? item.title : item.title + "\nDrag it out to use it; it leaves the stash unless pinned.")
+        .enableInjection()
     }
 
     private var dragPreview: NSImage? {
@@ -239,6 +249,10 @@ private struct SendDropTarget: View {
     let send: ([URL]) -> Void
     @State private var targeted = false
 
+    #if DEBUG
+    @ObserveInjection var forceRedraw
+    #endif
+
     var body: some View {
         HStack(spacing: 5) {
             Image(systemName: systemImage).font(.system(size: 12))
@@ -264,6 +278,7 @@ private struct SendDropTarget: View {
             return true
         }
         .onChange(of: targeted) { _, value in NotchState.shared.holdOpen("send-drop-\(title)", value) }
+        .enableInjection()
     }
 }
 
@@ -271,6 +286,10 @@ private struct SendDropTarget: View {
 /// glass; the dashed outline appears only while something is dragged over it.
 private struct DropSurface: View {
     let targeted: Bool
+
+    #if DEBUG
+    @ObserveInjection var forceRedraw
+    #endif
 
     var body: some View {
         RoundedRectangle(cornerRadius: 12)
@@ -281,5 +300,6 @@ private struct DropSurface: View {
                         .strokeBorder(.white.opacity(0.6), style: StrokeStyle(lineWidth: 1, dash: [4]))
                 }
             }
+        .enableInjection()
     }
 }

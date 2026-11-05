@@ -37,6 +37,10 @@ struct ClipboardView: View {
     /// Filtering, search and ordering (pinned first) happen in the store's SQL query.
     private var visible: [ClipItem] { store.results }
 
+    #if DEBUG
+    @ObserveInjection var forceRedraw
+    #endif
+
     var body: some View {
         VStack(spacing: 6) {
             header
@@ -61,6 +65,7 @@ struct ClipboardView: View {
         .onChange(of: filter) { _, _ in runSearch() }
         .onAppear { store.search(query, filter: filter.storeFilter) }
         .onDisappear { NotchState.shared.holdOpen("clipboard-search", false) }
+        .enableInjection()
     }
 
     // MARK: Header
@@ -238,6 +243,10 @@ private struct ClipRow: View {
     let onOpenInTools: (() -> Void)?
     @State private var hovering = false
 
+    #if DEBUG
+    @ObserveInjection var forceRedraw
+    #endif
+
     var body: some View {
         HStack(spacing: 8) {
             leading.frame(width: 28, height: 28)
@@ -277,6 +286,7 @@ private struct ClipRow: View {
         .contentShape(RoundedRectangle(cornerRadius: 7))
         .onHover { hovering = $0 }
         .onTapGesture(perform: onPaste)
+        .enableInjection()
     }
 
     @ViewBuilder private var leading: some View {

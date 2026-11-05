@@ -10,6 +10,10 @@ struct GeneralSettingsPane: View {
     @Bindable private var settings = Settings.shared
     @State private var loginStatus = SMAppService.mainApp.status
 
+    #if DEBUG
+    @ObserveInjection var forceRedraw
+    #endif
+
     var body: some View {
         Form {
             Section("Startup") {
@@ -57,6 +61,7 @@ struct GeneralSettingsPane: View {
             }
         }
         .settingsPaneStyle()
+        .enableInjection()
     }
 
     private func setLaunchAtLogin(_ enabled: Bool) {

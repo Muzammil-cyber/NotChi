@@ -9,6 +9,10 @@ struct ClipboardSettingsPane: View {
     @Bindable private var settings = Settings.shared
     @State private var newBundleID = ""
 
+    #if DEBUG
+    @ObserveInjection var forceRedraw
+    #endif
+
     var body: some View {
         Form {
             Section("History") {
@@ -41,6 +45,7 @@ struct ClipboardSettingsPane: View {
             }
         }
         .settingsPaneStyle()
+        .enableInjection()
     }
 
     private func addBundleID() {
